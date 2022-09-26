@@ -38,13 +38,13 @@ IS_ECOGAN = is_score['CIFAR10-ourloss - IS score']
 ax.set_xlabel('Step')
 # ax.set_yscale("log")
 
-ax.plot(step, FID_ContraGAN, label='FID of 2C loss', linestyle='--', color='r')
-ax.plot(step, FID_ReACGAN, label='FID of D2D-CE loss', linestyle='--', color='g')
-ax.plot(step, FID_ECOGAN, label='FID of EC loss (our)', linestyle='--', color='b')
+ax.plot(step, FID_ContraGAN, label='2C loss', linestyle='--', color='r')
+ax.plot(step, FID_ReACGAN, label='D2D-CE loss', linestyle='--', color='g')
+ax.plot(step, FID_ECOGAN, label='EC loss (our)', linestyle='--', color='b')
 
-ax.plot(step, IS_ContraGAN, label='IS of 2C loss', color='r')
-ax.plot(step, IS_ECOGAN, label='IS of D2D-CE loss', color='g')
-ax.plot(step, IS_ReACGAN, label='IS of EC loss (our)', color='b')
+ax.plot(step, IS_ContraGAN, label='2C loss', color='r')
+ax.plot(step, IS_ECOGAN, label='D2D-CE loss', color='g')
+ax.plot(step, IS_ReACGAN, label='EC loss (our)', color='b')
 
 ax.legend(bbox_to_anchor=(1, 1), loc=1, frameon=False, fontsize=16)
 # ax2.legend(bbox_to_anchor=(1, 1), loc=1, frameon=False, fontsize=16)
