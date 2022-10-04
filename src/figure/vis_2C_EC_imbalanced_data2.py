@@ -38,9 +38,9 @@ ax2.set_ylabel('IS')
 # ax.set_yscale("log")
 
 ax1.plot(step, fid_contra, label='2C loss', linestyle='--', color='r')
-ax1.plot(step, fid_eco, label='EC loss (our)', linestyle='--', color='b')
+ax1.plot(step, fid_eco, label='EC loss (ours)', linestyle='--', color='b')
 ax2.plot(step, is_contra, label='2C loss', color='r')
-ax2.plot(step, is_eco, label='EC loss (our)', color='b')
+ax2.plot(step, is_eco, label='EC loss (ours)', color='b')
 
 ax1.legend(bbox_to_anchor=(1, 1), loc=1, frameon=False, fontsize=16)
 ax2.legend(bbox_to_anchor=(1, 1), loc=1, frameon=False, fontsize=16)

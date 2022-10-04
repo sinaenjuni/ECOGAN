@@ -43,11 +43,11 @@ ax2.set_ylabel('IS')
 
 ax1.plot(step, FID_ContraGAN, label='2C loss', linestyle='--', color='r')
 ax1.plot(step, FID_ReACGAN, label='D2D-CE loss', linestyle='--', color='g')
-ax1.plot(step, FID_ECOGAN, label='EC loss (our)', linestyle='--', color='b')
+ax1.plot(step, FID_ECOGAN, label='EC loss (ours)', linestyle='--', color='b')
 
 ax2.plot(step, IS_ContraGAN, label='2C loss', color='r')
 ax2.plot(step, IS_ECOGAN, label='D2D-CE loss', color='g')
-ax2.plot(step, IS_ReACGAN, label='EC loss (our)', color='b')
+ax2.plot(step, IS_ReACGAN, label='EC loss (ours)', color='b')
 
 ax1.legend(bbox_to_anchor=(1, 1), loc=1, frameon=False, fontsize=16)
 ax2.legend(bbox_to_anchor=(1, 0.6), loc=1, frameon=False, fontsize=16)
