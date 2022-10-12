@@ -5,38 +5,38 @@ plt.style.use('classic')
 np.set_printoptions(precision=3, suppress=True)
 
 X = np.array([
-    # [-0.1, 1.4],
-    #           [-0.5, -0.1],
+    [-0.1, 1.4],
+              [-0.5, -0.1],
               [1.3, 0.9],
-              # [-0.6, 0.4],
-              # [-1.5, 0.4],
+              [-0.6, 0.4],
+              [-1.5, 0.4],
               [0.2, 0.2],
               [-0.3, -0.4],
               [0.7, -0.8],
               [1.1, -1.5],
               [-1.0, 0.9],
               [-0.5, -1.5],
-              # [-1.3, -0.4],
-              # [-1.4, -1.2],
+              [-1.3, -0.4],
+              [-1.4, -1.2],
               [-0.9, -1.1],
               [0.4, -1.3],
               [-0.4, 0.6],
               [0.3, -0.5]])
 
 y = np.array([
-    # 0,
-    #           0,
+              0,
+              0,
               1,
-              # 0,
-              # 0,
+              0,
+              0,
               1,
               1,
               1,
               1,
               0,
               1,
-              # 0,
-              # 0,
+              0,
+              0,
               1,
               1,
               0,
@@ -171,5 +171,41 @@ plt.xlim([-2.0, 2.0])
 plt.ylim([-2.0, 2.0])
 plt.show()
 
+
 plt.plot(b_cache)
+plt.show()
+
+
+NX = 100
+NY = 100
+
+def plot_decision_boundary_lazy(X, y, w, b):
+  plt.grid()
+  plt.xlim([-2.0, 2.0])
+  plt.ylim([-2.0, 2.0])
+  plt.xlabel('$x_1$', size=20)
+  plt.ylabel('$x_2$', size=20)
+  plt.title('Decision boundary - Lazy setting', size = 18)
+
+  xs = np.linspace(-2.0, 2.0, NX)
+  ys = np.linspace(2.0, -2.0, NY)
+  xv, yv = np.meshgrid(xs, ys)
+
+  X_fake = np.stack((xv.flatten(), yv.flatten()), axis=1)
+
+  predictions = []
+  for i in range(X_fake.shape[0]):
+    predictions.append(sigmoid(w.dot(X_fake[i,:]) + b))
+
+  predictions = np.array(predictions)
+  # predictions = np.stack( (1-predictions, np.zeros(NX * NY), predictions) )
+  predictions = np.stack( (1-predictions, np.zeros(NX * NY), predictions) )
+  plt.imshow(predictions.T.reshape(NX, NY, 3), extent=[-2.0, 2.0, -2.0, 2.0])
+  plt.scatter(X[:, 0], X[:, 1], s=50, c=colormap[y])
+
+  # plt.savefig('image.png')
+
+plot_decision_boundary_lazy(X, y, w_cache[-1], b_cache[-1])
+
+
 plt.show()
