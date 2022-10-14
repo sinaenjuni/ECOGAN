@@ -59,15 +59,22 @@ test_dataset = CIFAR10_LT(is_train=False, cls_target=(0, 1), transforms=Compose(
 test_loader = DataLoader(test_dataset, batch_size=128, shuffle=True)
 
 def get_loss_relu(z, y):
-    return (y*F.relu(1-z)).mean() + ((1-y)*F.relu(1+z)).mean()
+    L = (y*F.relu(1-z)).sum(1) + ((1-y)*F.relu(1+z)).sum(1)
+    return L.mean()
+def get_loss_numerically_stable(y, z):
+    L = -1 * (y * -1 * torch.log(1 + torch.exp(-z)) +
+                (1-y) * (-z - torch.log(1 + torch.exp(-z))))
+    return L.mean()
 
 encoder = resnet18(num_classes=2).cuda()
-classifier = nn.Sequential(nn.ReLU(),
-                           nn.Linear(2, 2, bias=False)).cuda()
+# classifier = nn.Sequential(nn.ReLU(),
+#                            nn.Linear(2, 2, bias=False)).cuda()
+classifier = nn.Linear(2, 2, bias=False).cuda()
+# w = torch.tensor([[0.0, 1.0]], requires_grad=True).cuda()
+# w = F.normalize(w, dim=1)
+# torch.ran
 
-w = torch.tensor([[1,0]]).float().cuda()
-
-# em = nn.Embedding(1, 2).cuda()
+# em = nn.Embedding(2, 2).cuda()
 # w = torch.nn.utils.weight_norm(em, dim=1)
 # em.weight.norm(dim=1)
 # for W in em.parameters():
@@ -75,16 +82,24 @@ w = torch.tensor([[1,0]]).float().cuda()
 
 # em_weight = em.weight
 # t = F.normalize(e(torch.range(0, 1).long()), dim=1)
-plt.scatter(w[:,0].cpu().detach().numpy(), w[:,1].cpu().detach().numpy())
+# plt.scatter(w[:,0].cpu().detach().numpy(), w[:,1].cpu().detach().numpy())
 # plt.scatter(em_weight[:,0], em_weight[:,1])
-plt.xlim([-2.0, 2.0])
-plt.ylim([-2.0, 2.0])
-plt.show()
+# plt.xlim([-2.0, 2.0])
+# plt.ylim([-2.0, 2.0])
+# plt.show()
 
 optimizer = torch.optim.Adam(params=[{'params': encoder.parameters()},
                                     {'params': classifier.parameters()}], lr=0.1)
 color = np.array(['r','b'])
 color_test = np.array(['k','y'])
+
+# https://github.com/cvqluu/Angular-Penalty-Softmax-Losses-Pytorch/blob/c41d599622b6a6ba7e5be6faf3a01da1202024ea/loss_functions.py#L6
+
+def remove_diagonal(M):
+    batch_size = M.size(0)
+    mask = torch.ones_like(M).fill_diagonal_(0).bool()
+
+    return M[mask].view(batch_size, -1).contiguous()
 
 for i in range(50):
     total_loss = 0
@@ -95,9 +110,43 @@ for i in range(50):
         optimizer.zero_grad()
 
         e = encoder(img)
-        y_hat = classifier(e)
-        y_hat = F.normalize(y_hat, dim=1)
-        y_hat = y_hat @ w.T
+        e = F.normalize(e, dim=1)
+
+        for W in classifier.parameters():
+            W = F.normalize(W, dim=1)
+        y_hat = classifier(e) - 3
+        print(y_hat.min().data, y_hat.max().data)
+
+
+
+        denominator = torch.exp(numerator) + torch.sum(torch.exp(self.s * excl), dim=1)
+        L = numerator - torch.log(denominator)
+        loss = -torch.mean(L)
+
+        # loss = F.cross_entropy(y_hat, label)
+
+        # loss = get_loss_relu(label, y_hat)
+        # p = F.normalize(p, dim=1)
+
+        # sim = F.cosine_similarity(p.unsqueeze(0), p.unsqueeze(1), dim=2)
+        # sim = remove_diagonal(sim)
+        # mask_n = torch.ne(label.unsqueeze(0), label.unsqueeze(1))
+        # mask_n = remove_diagonal(mask_n)
+        # mask_p = torch.eq(label.unsqueeze(0), label.unsqueeze(1))
+        # mask_p = remove_diagonal(mask_p)
+        #
+        # sim_p = sim * mask_p
+        # sim_n = sim * mask_n
+
+        # loss = -1 * (torch.log(sim_p) + torch.log(1 - sim_n))
+        # loss = -1 * (-1 * torch.log(1 + torch.exp(-sim_p).sum(1)) +
+        #              (-sim_n.sum(1) - torch.log(1 + torch.exp(-sim_n).sum(1)))).mean()
+
+        # w = em(label)
+        # w = F.normalize(w, dim=1)
+        # y_hat = w @ p.T
+        # y_hat = p @ w.T
+
 
         # e = F.normalize(e, dim=1)
 
@@ -117,31 +166,37 @@ for i in range(50):
 
         # for W in classifier.parameters():
         #     W = F.normalize(W, dim=1)
+        # pos_weight = torch.ones_like(label) * 2
+        # loss = F.binary_cross_entropy_with_logits(y_hat.squeeze(), label.float(), pos_weight=pos_weight)
+        # loss = get_loss_relu(y_hat.squeeze(), label.float())\
+        # loss = get_loss_numerically_stable(label, y_hat)
 
-        loss = F.binary_cross_entropy_with_logits(y_hat.squeeze(), label.float())
-        # loss = get_loss_relu(y_hat.squeeze(), label.float())
+
         total_loss += loss.cpu().detach().numpy()
         loss.backward()
         optimizer.step()
 
-        e = F.normalize(e, dim=1)
+        # e = F.normalize(e, dim=1)
         e_list.append(e.cpu().detach().numpy())
         l_list.append(label.cpu().detach().numpy())
     print(total_loss/len(loader))
 
     e_list = np.concatenate(e_list)
     l_list = np.concatenate(l_list)
-    plt.scatter(e_list[:,0], e_list[:,1], c=color[l_list])
+    plt.scatter(e_list[:,0],
+                e_list[:,1], c=color[l_list], alpha=0.3)
+    # plt.scatter(w[:,0].cpu().detach().numpy(),
+    #             w[:,1].cpu().detach().numpy(), c='black', s=100, alpha=.3)
 
-    # xs = np.array([e_list[:,0].min(), e_list[:,0].max()])
-    # w1 = classifier[1].weight.cpu().detach().numpy()[0][0]
-    # w2 = classifier[1].weight.cpu().detach().numpy()[0][1]
+    xs = np.array([e_list[:,0].min(), e_list[:,0].max()])
+    w1 = classifier.weight.cpu().detach().numpy()[0][0]
+    w2 = classifier.weight.cpu().detach().numpy()[0][1]
     # b = classifier[1].bias.cpu().detach().numpy()[0]
     # ys = (-w1 * xs - b) / w2
-    # ys = (-w1 * xs) / w2
-    # plt.plot(xs, ys, c='black')
-    plt.xlim([-1.0, 1.0])
-    plt.ylim([-1.0, 1.0])
+    ys = (-w1 * xs) / w2
+    plt.plot(xs, ys, c='black')
+    plt.xlim([-2.0, 2.0])
+    plt.ylim([-2.0, 2.0])
     plt.show()
 
 #
