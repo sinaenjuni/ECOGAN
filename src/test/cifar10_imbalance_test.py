@@ -119,11 +119,11 @@ for i in range(50):
 
 
 
-        denominator = torch.exp(numerator) + torch.sum(torch.exp(self.s * excl), dim=1)
-        L = numerator - torch.log(denominator)
-        loss = -torch.mean(L)
+        # denominator = torch.exp(numerator) + torch.sum(torch.exp(self.s * excl), dim=1)
+        # L = numerator - torch.log(denominator)
+        # loss = -torch.mean(L)
 
-        # loss = F.cross_entropy(y_hat, label)
+        loss = F.cross_entropy(y_hat, label)
 
         # loss = get_loss_relu(label, y_hat)
         # p = F.normalize(p, dim=1)
