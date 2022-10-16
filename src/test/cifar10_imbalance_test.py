@@ -46,7 +46,7 @@ class CIFAR10_LT(Dataset):
             image = self.transforms(image)
         return image, label
 
-dataset = CIFAR10_LT(is_train=False, cls_target=(0, 1), transforms=Compose([ToTensor(),
+dataset = CIFAR10_LT(is_train=True, cls_target=(0, 1), transforms=Compose([ToTensor(),
                                                                            Normalize((0.5, 0.5, 0.5),
                                                                                      (0.5, 0.5, 0.5))]))
 np.unique(dataset.labels, return_counts=True)
@@ -61,6 +61,7 @@ test_loader = DataLoader(test_dataset, batch_size=128, shuffle=True)
 def get_loss_relu(z, y):
     L = (y*F.relu(1-z)).sum(1) + ((1-y)*F.relu(1+z)).sum(1)
     return L.mean()
+
 def get_loss_numerically_stable(y, z):
     L = -1 * (y * -1 * torch.log(1 + torch.exp(-z)) +
                 (1-y) * (-z - torch.log(1 + torch.exp(-z))))
@@ -69,7 +70,7 @@ def get_loss_numerically_stable(y, z):
 encoder = resnet18(num_classes=2).cuda()
 # classifier = nn.Sequential(nn.ReLU(),
 #                            nn.Linear(2, 2, bias=False)).cuda()
-classifier = nn.Linear(2, 2, bias=False).cuda()
+classifier = nn.Linear(2, 1, bias=False).cuda()
 # w = torch.tensor([[0.0, 1.0]], requires_grad=True).cuda()
 # w = F.normalize(w, dim=1)
 # torch.ran
@@ -89,7 +90,7 @@ classifier = nn.Linear(2, 2, bias=False).cuda()
 # plt.show()
 
 optimizer = torch.optim.Adam(params=[{'params': encoder.parameters()},
-                                    {'params': classifier.parameters()}], lr=0.1)
+                                    {'params': classifier.parameters()}], lr=0.01)
 color = np.array(['r','b'])
 color_test = np.array(['k','y'])
 
@@ -100,11 +101,13 @@ def remove_diagonal(M):
     mask = torch.ones_like(M).fill_diagonal_(0).bool()
 
     return M[mask].view(batch_size, -1).contiguous()
-
+s = 1
+m = 4.0
 for i in range(50):
     total_loss = 0
     e_list = []
     l_list = []
+    y_hat_list = []
     for img, label in loader:
         img, label = img.cuda(), label.cuda()
         optimizer.zero_grad()
@@ -114,16 +117,39 @@ for i in range(50):
 
         for W in classifier.parameters():
             W = F.normalize(W, dim=1)
-        y_hat = classifier(e) - 3
-        print(y_hat.min().data, y_hat.max().data)
+        y_hat = classifier(e)
+        y_hat = y_hat.squeeze()
+
+        # numerator = s * (torch.diagonal(y_hat.transpose(0, 1)[label]) - m)
+        # excl = torch.cat([torch.cat((y_hat[i, :y], y_hat[i, y + 1:])).unsqueeze(0) for i, y in enumerate(label)], dim=0)
+        # denominator = torch.exp(numerator) + torch.sum(torch.exp(s * excl), dim=1)
+        # L = numerator - torch.log(denominator)
+        # loss = -torch.mean(L)
+
+        improved_sim_matrix = (1 - label) * torch.exp(y_hat)
+        pos_attr = label * F.relu((0.9 - y_hat))
+        # compute negative repulsion term
+        neg_repul = torch.log(torch.exp(-pos_attr) + improved_sim_matrix.sum())
+        # compute data to data cross-entropy criterion
+        loss = (pos_attr + neg_repul).mean()
 
 
 
+        # loss = (label * (F.relu(10. - y_hat))).mean() +\
+        #        ((1 - label) * (F.relu(10. + y_hat))).mean()
+
+        # loss = (-1 * (label * -1 * torch.log(1 + torch.exp(-y_hat)) +
+        #       (1 - label) * (-y_hat - torch.log(1 + torch.exp(-y_hat))))).mean()
+
+        # loss =  -1 * (label * torch.log(1 + torch.exp(-y_hat)) +
+        #               (1 - label) * torch.log(1 + torch.exp(-y_hat))).mean()
+        # -1 * (label * -1 * torch.log(1 + torch.exp(-z)) + (1 - y) * (-z - np.log(1 + np.exp(-z))))
         # denominator = torch.exp(numerator) + torch.sum(torch.exp(self.s * excl), dim=1)
         # L = numerator - torch.log(denominator)
         # loss = -torch.mean(L)
 
-        loss = F.cross_entropy(y_hat, label)
+        # loss = F.cross_entropy(y_hat, label)
+        # loss = get_loss_relu(y_hat, label)
 
         # loss = get_loss_relu(label, y_hat)
         # p = F.normalize(p, dim=1)
@@ -167,7 +193,7 @@ for i in range(50):
         # for W in classifier.parameters():
         #     W = F.normalize(W, dim=1)
         # pos_weight = torch.ones_like(label) * 2
-        # loss = F.binary_cross_entropy_with_logits(y_hat.squeeze(), label.float(), pos_weight=pos_weight)
+        # loss = F.binary_cross_entropy_with_logits(y_hat.squeeze(), label.float())
         # loss = get_loss_relu(y_hat.squeeze(), label.float())\
         # loss = get_loss_numerically_stable(label, y_hat)
 
@@ -177,20 +203,27 @@ for i in range(50):
         optimizer.step()
 
         # e = F.normalize(e, dim=1)
+
         e_list.append(e.cpu().detach().numpy())
         l_list.append(label.cpu().detach().numpy())
-    print(total_loss/len(loader))
+        y_hat_list.append(y_hat.cpu().detach().numpy())
 
     e_list = np.concatenate(e_list)
     l_list = np.concatenate(l_list)
+    y_hat_list = np.concatenate(y_hat_list)
     plt.scatter(e_list[:,0],
                 e_list[:,1], c=color[l_list], alpha=0.3)
-    # plt.scatter(w[:,0].cpu().detach().numpy(),
-    #             w[:,1].cpu().detach().numpy(), c='black', s=100, alpha=.3)
 
-    xs = np.array([e_list[:,0].min(), e_list[:,0].max()])
+    # xs = np.array([e_list[:,0].min(), e_list[:,0].max()])
+    xs = np.array([-2.0, 2.0])
+    for W in classifier.parameters():
+        W = F.normalize(W, dim=1)
     w1 = classifier.weight.cpu().detach().numpy()[0][0]
     w2 = classifier.weight.cpu().detach().numpy()[0][1]
+
+    plt.scatter(w1,
+                w2, c='black', s=100, alpha=.3)
+
     # b = classifier[1].bias.cpu().detach().numpy()[0]
     # ys = (-w1 * xs - b) / w2
     ys = (-w1 * xs) / w2
@@ -199,27 +232,67 @@ for i in range(50):
     plt.ylim([-2.0, 2.0])
     plt.show()
 
+    acc = (y_hat_list.argmax(-1) == l_list).sum()/len(l_list)
+    # acc = ((y_hat_list > 0.5) == l_list).sum()/len(l_list)
+    print(total_loss/len(loader), acc)
+
+    print(y_hat_list.min(),
+          y_hat_list.max(),
+          y_hat_list.mean(),
+          y_hat_list.std())
+
+
+
+test_y_hat_list = []
+test_e_list = []
+test_l_list = []
+for img, label in test_loader:
+    img, label = img.cuda(), label.cuda()
+    test_e = encoder(img)
+    test_e = F.normalize(test_e, dim=1)
+    test_y_hat = classifier(test_e)
+
+    test_y_hat = test_y_hat.squeeze()
+    test_y_hat_list.append(test_y_hat.cpu().detach().numpy())
+    test_e_list.append(test_e.cpu().detach().numpy())
+    test_l_list.append(label.cpu().detach().numpy())
+
+test_y_hat_list = np.concatenate(test_y_hat_list)
+test_e_list = np.concatenate(test_e_list)
+test_l_list = np.concatenate(test_l_list)
+
+plt.scatter(test_e_list[:, 0],
+            test_e_list[:, 1], c=color[test_l_list], alpha=0.3)
+
+xs = np.array([-2.0, 2.0])
+w1 = classifier.weight.cpu().detach().numpy()[0][0]
+w2 = classifier.weight.cpu().detach().numpy()[0][1]
+ys = (-w1 * xs) / w2
+plt.plot(xs, ys, c='black')
+
+plt.xlim([-2.0, 2.0])
+plt.ylim([-2.0, 2.0])
+plt.show()
+
+acc = (test_y_hat_list.argmax(-1) == test_l_list).sum() / len(l_list)
+# acc = ((test_y_hat_list > 0.5) == test_l_list).sum() / len(test_l_list)
+print(acc)
+
+# idx = np.where(test_l_list == 0)
+# ((test_y_hat_list[idx] > 0.5) == test_l_list[idx]).sum() / len(test_l_list[idx])
+
+
+
+
 #
-# test_e_list = []
-# test_l_list = []
-# for img, label in test_loader:
-#     img, label = img.cuda(), label.cuda()
-#     e = encoder(img)
-#     e = F.normalize(e, dim=1)
-#     test_e_list.append(e.cpu().detach().numpy())
-#     test_l_list.append(label.cpu().detach().numpy())
-#
-# test_e_list = np.concatenate(test_e_list)
-# test_l_list = np.concatenate(test_l_list)
-# #
 # def plot_decision_boundary(X, y, w, b, path):
-#     plt.grid()
-#     # plt.xlim([-4.0, 20.0])
-#     # plt.ylim([-4.0, 20.0])
-#     plt.xlabel('$x_1$', size=20)
-#     plt.ylabel('$x_2$', size=20)
-#     plt.title('Decision boundary', size=18)
-#
+    # plt.grid()
+    # plt.xlim([-4.0, 20.0])
+    # plt.ylim([-4.0, 20.0])
+    # plt.xlabel('$x_1$', size=20)
+    # plt.ylabel('$x_2$', size=20)
+    # plt.title('Decision boundary', size=18)
+
 #     xs = np.array([-1.0, 1.0])
 #     ys = (-w[0] * xs - b) / w[1]
 #

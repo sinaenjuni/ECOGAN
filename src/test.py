@@ -11,3 +11,9 @@ for c in range(num_classes):
 
 
 labels.unsqueeze(1) @ labels.unsqueeze(0)
+
+
+
+t = torch.rand(2, 3)
+y = 2
+t[1, :y], t[1, y+1:]
