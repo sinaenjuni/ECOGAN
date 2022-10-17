@@ -1,33 +1,34 @@
 
-from tensorflow.keras.applications.inception_v3 import preprocess_input
-from skimage.transform import resize
+# from tensorflow.keras.applications.inception_v3 import preprocess_input
+# from skimage.transform import resize
 from tqdm import tqdm
 import numpy as np
 
-def scale_images(images, new_shape):
-    images_list = list()
-    for image in images:
-        # resize with nearest neighbor interpolation
-        new_image = resize(image, new_shape, 0)*255
-        # store
-        images_list.append(new_image)
-    return np.asarray(images_list)
+#
+# def scale_images(images, new_shape):
+#     images_list = list()
+#     for image in images:
+#         # resize with nearest neighbor interpolation
+#         new_image = resize(image, new_shape, 0)*255
+#         # store
+#         images_list.append(new_image)
+#     return np.asarray(images_list)
+#
+#
+# def stack_features(image, eval_model, batch_size):
+#     N = image.shape[0]
+#     act = []
+#     for i_ in tqdm(range((N//batch_size)+1), disable=False):
+#         # print(i*batch_size, (i+1) * batch_size)
+#         batch_ = image[i_*batch_size: (i_+1) * batch_size]
+#         batch_ = scale_images(batch_, (299, 299, 3))
+#         batch_ = preprocess_input(batch_)
+#         act.append(eval_model.predict(batch_))
+#     act = np.concatenate(act)
+#     return act
 
 
-def stack_features(image, eval_model, batch_size):
-    N = image.shape[0]
-    act = []
-    for i_ in tqdm(range((N//batch_size)+1), disable=False):
-        # print(i*batch_size, (i+1) * batch_size)
-        batch_ = image[i_*batch_size: (i_+1) * batch_size]
-        batch_ = scale_images(batch_, (299, 299, 3))
-        batch_ = preprocess_input(batch_)
-        act.append(eval_model.predict(batch_))
-    act = np.concatenate(act)
-    return act
-
-
-def get_inception_score(probs, num_splits):
+def get_inception_score(probs, num_splits=10):
     N = probs.shape[0]
     scores = []
 
