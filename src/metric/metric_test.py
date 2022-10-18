@@ -1,28 +1,26 @@
-from src.metric.inception_net import FeatureExtractorInceptionV3
-
-
 from torchvision.datasets import CIFAR10
 from torch.utils.data import DataLoader
 from torchvision.transforms import Compose, ToTensor, Resize, InterpolationMode, Normalize
 import torch
 from tqdm import tqdm
 import scipy
-import numpy as np
+from scipy import linalg
 
-eval_model = FeatureExtractorInceptionV3(name='InceptionV3', features_list=['2048', 'logits_unbiased']).cuda()
-eval_model.eval()
-cifar10 = CIFAR10(root='/shared_hdd/sin/dataset/', download=True, train=True, transform=ToTensor())
-cifar10_loader = DataLoader(cifar10, 128)
+
+cifar10_train = CIFAR10(root='/shared_hdd/sin/dataset/', download=True, train=True,
+                        transform=Compose([ToTensor(),
+                                           Normalize([0.5, 0.5, 0.5],
+                                                     [0.5, 0.5, 0.5])]))
+cifar10_train_loader = DataLoader(cifar10_train, 128)
 # img, label = iter(cifar10_loader).__next__()
 
+cifar10_test = CIFAR10(root='/shared_hdd/sin/dataset/', download=True, train=False,
+                  transform=Compose([Resize(size=299, interpolation=InterpolationMode.BILINEAR),
+                                     ToTensor(),
+                                     # Normalize(mean=model.mean, std=model.std)
+                                     ]))
+cifar10_test_loader = DataLoader(cifar10_test, 128)
 
-feat_l = []
-logit_l = []
-for img, label in tqdm(cifar10_loader):
-    img = (img * 255).to(torch.uint8).cuda()
-    feat, logit = eval_model(img)
-    feat_l.append(feat)
-    logit_l.append(logit)
 
 
 feat_l_test = []
@@ -33,9 +31,6 @@ for img, label in tqdm(cifar10_test_loader):
     feat_l_test.append(feat)
     logit_l_test.append(logit)
 
-
-# torch.cat(logit_l).softmax(dim=1).log()
-# torch.cat(logit_l).log_softmax(dim=1)
 
 
 def inception_scroe(features, splits=10):
@@ -109,16 +104,65 @@ def frechet_inception_distance(real_features, fake_features):
     fake_features = fake_features.double()
 
     # calculate mean and covariance
-    n = real_features.shape[0]
+    n1 = real_features.shape[0]
+    n2 = fake_features.shape[0]
     mean1 = real_features.mean(dim=0)
     mean2 = fake_features.mean(dim=0)
     diff1 = real_features - mean1
     diff2 = fake_features - mean2
-    cov1 = 1.0 / (n - 1) * diff1.t().mm(diff1)
-    cov2 = 1.0 / (n - 1) * diff2.t().mm(diff2)
+    cov1 = 1.0 / (n1 - 1) * diff1.t().mm(diff1)
+    cov2 = 1.0 / (n1 - 1) * diff2.t().mm(diff2)
 
     # compute fid
     return _compute_fid(mean1, cov1, mean2, cov2).to(orig_dtype)
+
+def _compute_fid(mu1, sigma1, mu2, sigma2, eps: float = 1e-6):
+    diff = mu1 - mu2
+
+    # Product might be almost singular
+    covmean, _ = linalg.sqrtm(sigma1.dot(sigma2), disp=False)
+    if not np.isfinite(covmean).all():
+        offset = np.eye(sigma1.shape[0]) * eps
+        covmean = linalg.sqrtm((sigma1 + offset).dot(sigma2 + offset))
+
+    # Numerical error might give slight imaginary component
+    if np.iscomplexobj(covmean):
+        if not np.allclose(np.diagonal(covmean).imag, 0, atol=1e-3):
+            m = np.max(np.abs(covmean.imag))
+            raise ValueError("Imaginary component {}".format(m))
+        covmean = covmean.real
+
+    tr_covmean = np.trace(covmean)
+    return (diff.dot(diff) + np.trace(sigma1) + np.trace(sigma2) - 2 * tr_covmean)
+
+
+def frechet_inception_distance(real_features, fake_features):
+    """Calculate FID score based on accumulated extracted features from the two distributions."""
+    real_features = torch.cat(real_features)
+    fake_features = torch.cat(fake_features)
+    # computation is extremely sensitive so it needs to happen in double precision
+    orig_dtype = real_features.dtype
+    real_features = real_features.double().cpu().numpy()
+    fake_features = fake_features.double().cpu().numpy()
+
+    # calculate mean and covariance
+    # n1 = real_features.shape[0]
+    # n2 = fake_features.shape[0]
+    # mean1 = real_features.mean(dim=0)
+    # mean2 = fake_features.mean(dim=0)
+    # diff1 = real_features - mean1
+    # diff2 = fake_features - mean2
+    # cov1 = 1.0 / (n1 - 1) * diff1.t().mm(diff1)
+    # cov2 = 1.0 / (n1 - 1) * diff2.t().mm(diff2)
+
+    mean1 = np.mean(real_features, axis=0)
+    mean2 = np.mean(fake_features, axis=0)
+
+    cov1 = np.cov(real_features, rowvar=False)
+    cov2 = np.cov(fake_features, rowvar=False)
+
+    # compute fid
+    return _compute_fid(mean1, cov1, mean2, cov2)
 
 
 frechet_inception_distance(feat_l_test, feat_l)
@@ -126,12 +170,20 @@ frechet_inception_distance(feat_l, feat_l_test)
 frechet_inception_distance(fid.real_features, fid.fake_features)
 
 
+real_features = torch.cat(feat_l)
+real_features = real_features.double()
+n = real_features.shape[0]
+
+mean = real_features.mean(dim=0)
+diff = real_features - mean
+cov = 1.0 / (n - 1) * diff.t().mm(diff)
+
+torch.cov(real_features)
+
+n = real_features.shape[0]
 
 ((torch.tensor(cifar10.data) - 128) / 128).mean()
 
-
-
-import torch
 
 class SaveOutput:
     def __init__(self):
@@ -208,12 +260,7 @@ cifar10_train = CIFAR10(root='/shared_hdd/sin/dataset/', download=True, train=Tr
 cifar10_train_loader = DataLoader(cifar10_train, 128)
 img, label = iter(cifar10_loader).__next__()
 
-cifar10_test = CIFAR10(root='/shared_hdd/sin/dataset/', download=True, train=False,
-                  transform=Compose([Resize(size=299, interpolation=InterpolationMode.BILINEAR),
-                                     ToTensor(),
-                                     # Normalize(mean=model.mean, std=model.std)
-                                     ]))
-cifar10_test_loader = DataLoader(cifar10_test, 128)
+
 
 
 logit_l = []

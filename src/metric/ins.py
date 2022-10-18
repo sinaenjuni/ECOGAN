@@ -1,74 +1,82 @@
 
-# from tensorflow.keras.applications.inception_v3 import preprocess_input
-# from skimage.transform import resize
-from tqdm import tqdm
-import numpy as np
-
-#
-# def scale_images(images, new_shape):
-#     images_list = list()
-#     for image in images:
-#         # resize with nearest neighbor interpolation
-#         new_image = resize(image, new_shape, 0)*255
-#         # store
-#         images_list.append(new_image)
-#     return np.asarray(images_list)
-#
-#
-# def stack_features(image, eval_model, batch_size):
-#     N = image.shape[0]
-#     act = []
-#     for i_ in tqdm(range((N//batch_size)+1), disable=False):
-#         # print(i*batch_size, (i+1) * batch_size)
-#         batch_ = image[i_*batch_size: (i_+1) * batch_size]
-#         batch_ = scale_images(batch_, (299, 299, 3))
-#         batch_ = preprocess_input(batch_)
-#         act.append(eval_model.predict(batch_))
-#     act = np.concatenate(act)
-#     return act
+import torch
 
 
-def get_inception_score(probs, num_splits=10):
-    N = probs.shape[0]
+def inception_softmax(eval_model, images, quantize):
+    with torch.no_grad():
+        embeddings, logits = eval_model.get_outputs(images, quantize=quantize)
+        ps = torch.nn.functional.softmax(logits, dim=1)
+    return ps
+
+
+def calculate_kl_div(ps, splits):
     scores = []
+    num_samples = ps.shape[0]
+    with torch.no_grad():
+        for j in range(splits):
+            part = ps[(j * num_samples // splits):((j + 1) * num_samples // splits), :]
+            kl = part * (torch.log(part) - torch.log(torch.unsqueeze(torch.mean(part, 0), 0)))
+            kl = torch.mean(torch.sum(kl, 1))
+            kl = torch.exp(kl)
+            scores.append(kl.unsqueeze(0))
 
-    for s_ in tqdm(range(num_splits), disable=False):
-        part = probs[s_ * N // num_splits: (s_ + 1) * N // num_splits, :]
-        kl = part * (np.log(part) - np.log(np.expand_dims(np.mean(part, 0), axis=0)))
-        kl = np.mean(np.sum(kl, 1))
-        kl = np.exp(kl)
-        scores.append(np.expand_dims(kl, axis=0))
-
-    scores = np.concatenate(scores, 0)
-    m_scores = np.mean(scores)
-    std_scores = np.std(scores)
-    return m_scores, std_scores
-
-
-# def stack_feature(eval_model, images):
-#     act = []
-#     for i in tqdm(range(iter_num)):
-#         start = i * batch_size
-#         end = i * batch_size + batch_size
-#         img_ = real_images[start:end]
-#         img_ = img_.astype('float32') / 255.
-#         img_ = scale_images(img_, (299, 299, 3))
-#         img_ = preprocess_input(img_)
-#         act.append(eval_model.predict(img_))
-#
-#     act = np.concatenate(act)
-#     mu, sigma = act.mean(axis=0), np.cov(act, rowvar=False)
+        scores = torch.cat(scores, 0)
+        m_scores = torch.mean(scores).detach().cpu().numpy()
+        m_std = torch.std(scores).detach().cpu().numpy()
+    return m_scores, m_std
 
 
-# probs = []
-# batch_size = 128
-# for i, batch in enumerate(loader):
-#     print(i+1, len(loader))
-#     img, lable = batch[0].type(dtype), batch[1].type(dtype)
-#     batch_size_i = img.size(0)
-#
-#     probs.append(get_pred(img))
-# probs = np.concatenate(probs, axis=0)
+import torch
+from src.metric.inception_net import EvalModel
+
+eval_model = EvalModel(torch.device('cuda'))
+
+from torchvision.datasets import CIFAR10
+from torchvision.transforms import Compose, ToTensor, Normalize
+from torch.utils.data import DataLoader
+
+cifar10 = CIFAR10(root='/shared_hdd/sin/dataset/', download=True, train=False,
+                        transform=Compose([ToTensor(),
+                                           Normalize([0.5, 0.5, 0.5],
+                                                     [0.5, 0.5, 0.5])]))
+cifar10_loader = DataLoader(cifar10, 64)
+img, label = iter(cifar10_loader).__next__()
+# embedding, logit = eval_model.get_outputs(img, quantize=True)
+
+ps_list = []
+for img, label in cifar10_loader:
+    img = img.cuda()
+    with torch.no_grad():
+        embedding, logit = eval_model.get_outputs(img, quantize=True)
+        ps = torch.nn.functional.softmax(logit, dim=1)
+    ps_list.append(ps)
+
+ps_list = torch.cat(ps_list)
+
+calculate_kl_div(ps_list, splits=10)
 
 
-# m_scores, std_scores = get_inception_score(probs=probs, num_splits=10)
+splits = 10
+j = 1
+scores = []
+num_samples = ps_list.shape[0]
+with torch.no_grad():
+    for j in range(splits):
+        part = ps_list[(j * num_samples // splits):((j + 1) * num_samples // splits), :]
+        kl = part * (torch.log(part) - torch.log(torch.unsqueeze(torch.mean(part, 0), 0)))
+        kl = torch.mean(torch.sum(kl, 1))
+        kl = torch.exp(kl)
+        scores.append(kl.unsqueeze(0))
+
+    scores = torch.cat(scores, 0)
+    m_scores = torch.mean(scores).detach().cpu().numpy()
+    m_std = torch.std(scores).detach().cpu().numpy()
+
+parts = ps_list.chunk(10)
+means = [torch.mean(part, 0, keepdim=True) for part in parts]
+kl_ = [part * torch.log(part)  for part, mean in zip(parts, means)]
+torch.unsqueeze(torch.mean(part, 0),0).size()
+torch.mean(part, 0, keepdim=True).size()
+
+torch.tensor([[1, 2],
+             [1, 2]]) - torch.tensor([1,2]).unsqueeze(0)
