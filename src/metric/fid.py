@@ -1,93 +1,26 @@
-
 import numpy as np
-from skimage.transform import resize
-from tensorflow.keras.applications.inception_v3 import InceptionV3
-from tensorflow.keras.applications.inception_v3 import preprocess_input
-from tensorflow.keras.models import load_model
 from scipy import linalg
-from tqdm import tqdm
-
-def scale_images(images, new_shape):
-    images_list = list()
-    for image in images:
-        # resize with nearest neighbor interpolation
-        new_image = resize(image, new_shape, 0)*255
-        # store
-        images_list.append(new_image)
-    return np.asarray(images_list)
-
-def stack_features(image, eval_model, batch_size):
-    N = image.shape[0]
-    act = []
-    for i_ in tqdm(range((N//batch_size)+1), disable=False):
-        # print(i*batch_size, (i+1) * batch_size)
-        batch_ = image[i_*batch_size: (i_+1) * batch_size]
-        batch_ = scale_images(batch_, (299, 299, 3))
-        batch_ = preprocess_input(batch_)
-        act.append(eval_model.predict(batch_))
-    act = np.concatenate(act)
-    mu, sigma = act.mean(axis=0), np.cov(act, rowvar=False)
-    return mu, sigma
 
 
+def frechet_inception_distance(mu1, sigma1, mu2, sigma2, eps=1e-6):
+    mu1 = np.atleast_1d(mu1)
+    mu2 = np.atleast_1d(mu2)
 
-# def get_real_data_mu_n_sigma(real_images, eval_model,iter_num, batch_size):
-#     # eval_model = InceptionV3(include_top=False, pooling='avg', input_shape=(299, 299, 3))
-#
-#     act = []
-#     for i in tqdm(range(iter_num)):
-#         start = i * batch_size
-#         end = i * batch_size + batch_size
-#         img_ = real_images[start:end]
-#         img_ = img_.astype('float32') / 255.
-#         img_ = scale_images(img_, (299, 299, 3))
-#         img_ = preprocess_input(img_)
-#         act.append(eval_model.predict(img_))
-#
-#     act = np.concatenate(act)
-#     mu, sigma = act.mean(axis=0), np.cov(act, rowvar=False)
-#
-#     return mu, sigma
-#
-#
-# def get_fake_data_mu_n_sigma(gen_path, eval_model, data_len, iter_num, batch_size):
-#     generator = load_model(gen_path)
-#     # eval_model = InceptionV3(include_top=False, pooling='avg', input_shape=(299, 299, 3))
-#
-#     act = []
-#     for i in tqdm(range(iter_num)):
-#         label = np.random.uniform(0, 10, batch_size).astype(np.long)
-#         noise = np.random.normal(0, 1, (batch_size, generator.input_shape[0][1]))
-#         gen_samples_ = generator.predict([noise, label])
-#         gen_samples_ = gen_samples_ * 0.5 + 0.5
-#         gen_samples_ = scale_images(gen_samples_, (299, 299, 3))
-#         gen_samples_ = preprocess_input(gen_samples_)
-#         act.append(eval_model.predict(gen_samples_))
-#
-#     act = np.concatenate(act)[:data_len]
-#     mu, sigma = act.mean(axis=0), np.cov(act, rowvar=False)
-#     return mu, sigma
+    sigma1 = np.atleast_2d(sigma1)
+    sigma2 = np.atleast_2d(sigma2)
 
-
-def get_fid_score(mu_real, sigma_real, mu_fake, sigma_fake, eps=1e-6):
-    mu_real = np.atleast_1d(mu_real)
-    mu_fake = np.atleast_1d(mu_fake)
-
-    sigma_real = np.atleast_2d(sigma_real)
-    sigma_fake = np.atleast_2d(sigma_fake)
-
-    assert mu_real.shape == mu_fake.shape, \
+    assert mu1.shape == mu2.shape, \
         "Training and test mean vectors have different lengths."
-    assert sigma_real.shape == sigma_fake.shape, \
+    assert sigma1.shape == sigma2.shape, \
         "Training and test covariances have different dimensions."
 
-    diff = mu_real - mu_fake
+    diff = mu1 - mu2
 
     # Product might be almost singular
-    covmean, _ = linalg.sqrtm(sigma_real.dot(sigma_fake), disp=False)
+    covmean, _ = linalg.sqrtm(sigma1.dot(sigma2), disp=False)
     if not np.isfinite(covmean).all():
-        offset = np.eye(sigma_real.shape[0]) * eps
-        covmean = linalg.sqrtm((sigma_real + offset).dot(sigma_fake + offset))
+        offset = np.eye(sigma1.shape[0]) * eps
+        covmean = linalg.sqrtm((sigma1 + offset).dot(sigma2 + offset))
 
     # Numerical error might give slight imaginary component
     if np.iscomplexobj(covmean):
@@ -97,4 +30,65 @@ def get_fid_score(mu_real, sigma_real, mu_fake, sigma_fake, eps=1e-6):
         covmean = covmean.real
 
     tr_covmean = np.trace(covmean)
-    return (diff.dot(diff) + np.trace(sigma_real) + np.trace(sigma_fake) - 2 * tr_covmean)
+    return (diff.dot(diff) + np.trace(sigma1) + np.trace(sigma2) - 2 * tr_covmean)
+
+
+def calculate_mu_sigma(eval_loader, eval_model):
+    feat_list = []
+    label_list = []
+    for img, label in tqdm(eval_loader, desc="Calculating Inception Score"):
+        img = img.cuda()
+        label_list.append(label)
+        with torch.no_grad():
+            embeddings, logits = eval_model.get_outputs(img, quantize=True)
+            feat_list.append(embeddings)
+
+    feat_list = torch.cat(feat_list)
+    label_list = np.concatenate(label_list)
+    feat_list = feat_list.detach().cpu().numpy().astype(np.float64)
+
+    mu = np.mean(feat_list, axis=0)
+    sigma = np.cov(feat_list, rowvar=False)
+
+    mu_list = {idx: np.mean(feat_list[np.where(label_list == idx)], axis=0) for idx in np.unique(label_list)}
+    sigma_list = {idx: np.cov(feat_list[np.where(label_list == idx)], rowvar=False) for idx in np.unique(label_list)}
+
+    return mu, sigma, mu_list, sigma_list, label_list
+
+import torch
+from tqdm import tqdm
+from src.metric.inception_net import EvalModel
+
+eval_model = EvalModel(torch.device('cuda'))
+
+
+from torchvision.datasets import CIFAR10
+from torchvision.transforms import Compose, ToTensor, Normalize
+from torch.utils.data import DataLoader
+
+cifar10_train = CIFAR10(root='/shared_hdd/sin/dataset/', download=True, train=True,
+                        transform=Compose([ToTensor(),
+                                           Normalize([0.5, 0.5, 0.5],
+                                                     [0.5, 0.5, 0.5])]))
+cifar10_test = CIFAR10(root='/shared_hdd/sin/dataset/', download=True, train=False,
+                        transform=Compose([ToTensor(),
+                                           Normalize([0.5, 0.5, 0.5],
+                                                     [0.5, 0.5, 0.5])]))
+eval_loader1 = DataLoader(cifar10_train, 128)
+eval_loader2 = DataLoader(cifar10_test, 128)
+# img, label = iter(cifar10_loader).__next__()
+# embedding, logit = eval_model.get_outputs(img, quantize=True)
+
+
+mu, sigma, mu_list, sigma_list, label_list = calculate_mu_sigma(eval_loader1, eval_model)
+mu1, sigma1, mu_list1, sigma_list1, label_list1 = calculate_mu_sigma(eval_loader2, eval_model)
+
+
+
+frechet_inception_distance(mu, sigma, mu1, sigma1)
+frechet_inception_distance(mu1, sigma1, mu, sigma)
+
+for mu1, sigma1, mu2, sigma2 in zip(mu_list.values(), sigma_list.values(), mu_list1.values(), sigma_list1.values()):
+    fid = frechet_inception_distance(mu1, sigma1, mu2, sigma2)
+    print(fid)
+    # print(mu1)
