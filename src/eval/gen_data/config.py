@@ -716,7 +716,7 @@ class Configurations(object):
             assert not self.RUN.batch_statistics, "batch_statistics cannot be used with synchronized_bn."
 
         if self.DATA.name in ["CIFAR10", "CIFAR100"]:
-            assert self.RUN.ref_dataset in ["train", "test"], "There is no data for validation."
+            assert self.RUN.ref_dataset in ["train", "binary_classification_test"], "There is no data for validation."
 
         if self.RUN.interpolation:
             assert self.MODEL.backbone in ["big_resnet", "big_resnet_deep_legacy", "big_resnet_deep_studiogan"], \

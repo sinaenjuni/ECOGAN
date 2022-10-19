@@ -396,7 +396,7 @@ def open_url(url: str, cache_dir: str = None, num_attempts: int = 10, verbose: b
     # which would translate to a local '/c:/foo.txt' filename that's
     # invalid.  Drop the forward slash for such pathnames.
     #
-    # If you touch this code path, you should test it on both Linux and
+    # If you touch this code path, you should binary_classification_test it on both Linux and
     # Windows.
     #
     # Some internet resources suggest using urllib.request.url2pathname() but
