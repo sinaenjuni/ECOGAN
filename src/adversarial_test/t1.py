@@ -181,10 +181,11 @@ class Encoder(nn.Module):
         adv_output = torch.sigmoid(adv_output)
         return adv_output
 
-
-
 decoder = Decoder(img_dim=img_dim, latent_dim=latent_dim).cuda()
 encoder = Encoder(img_dim=img_dim, latent_dim=img_dim).cuda()
+
+
+
 
 # latent = torch.randn(batch_size, latent_dim).cuda()
 # img_fake = decoder(latent).detach()
