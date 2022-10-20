@@ -278,8 +278,8 @@ for img, label in tqdm(cifar10_loader):
 logit_l = np.concatenate(logit_l)
 ref_l = np.concatenate(ref_l)
 
-from src.metric.ins import get_inception_score
-m, std = get_inception_score(logit_l)
+from src.metric.ins import inception_score
+m, std = inception_score(logit_l)
 
 from torchmetrics.image.inception import InceptionScore
 from torchmetrics.image.fid import FrechetInceptionDistance

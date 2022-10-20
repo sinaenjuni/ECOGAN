@@ -1,5 +1,7 @@
 import numpy as np
 from scipy import linalg
+from tqdm import tqdm
+import torch
 
 
 def frechet_inception_distance(mu1, sigma1, mu2, sigma2, eps=1e-6):
@@ -60,8 +62,8 @@ def calculate_mu_sigma(eval_loader, eval_model, quantize=True):
 
 
 if __name__ == "__main__":
-    import torch
-    from tqdm import tqdm
+    # import torch
+    # from tqdm import tqdm
     from src.metric.inception_net import EvalModel
 
     eval_model = EvalModel(torch.device('cuda'))

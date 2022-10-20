@@ -33,7 +33,7 @@ def calculate_kl_div(ps_list, splits=10):
     m_std = torch.std(scores).detach().cpu().numpy()
     return m_scores.item(), m_std.item()
 
-def get_inception_score(eval_loader, eval_model, quantize=True):
+def inception_score(eval_loader, eval_model, quantize=True):
     ps_list = []
     label_list = []
     for img, label in tqdm(eval_loader, desc="Calculating Inception Score"):
@@ -81,6 +81,6 @@ if __name__ == '__main__':
     cifar10_img_loader = DataLoader(cifar10_img, 128)
     # img, label = iter(cifar10_loader).__next__()
     # embedding, logit = eval_model.get_outputs(img, quantize=True)
-    m_score, m_std  = get_inception_score(eval_loader=eval_loader, eval_model=eval_model)
-    m_score2, m_std2 = get_inception_score(eval_loader=cifar10_img_loader, eval_model=eval_model)
+    m_score, m_std  = inception_score(eval_loader=eval_loader, eval_model=eval_model)
+    m_score2, m_std2 = inception_score(eval_loader=cifar10_img_loader, eval_model=eval_model)
 
