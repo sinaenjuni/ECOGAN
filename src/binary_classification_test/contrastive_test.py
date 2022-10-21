@@ -149,7 +149,7 @@ for i in range(100):
                 e_list[:,1], c=color[l_list], alpha=0.3)
 
     # xs = np.array([e_list[:,0].min(), e_list[:,0].max()])
-    xs = np.array([-20.0, 20.0])
+    xs = np.array([-40.0, 40.0])
     # for W in classifier.parameters():
     #     W = F.normalize(W, dim=1)
     w1 = classifier.weight.cpu().detach().numpy()[0][0]
@@ -162,8 +162,8 @@ for i in range(100):
     ys = (-w1 * xs - b) / w2
     # ys = (-w1 * xs) / w2
     plt.plot(xs, ys, c='black')
-    # plt.xlim([-2.0, 2.0])
-    # plt.ylim([-2.0, 2.0])
+    plt.xlim([-40.0, 40.0])
+    plt.ylim([-40.0, 40.0])
     plt.show()
 
     # acc = (y_hat_list.argmax(-1) == l_list).sum()/len(l_list)
