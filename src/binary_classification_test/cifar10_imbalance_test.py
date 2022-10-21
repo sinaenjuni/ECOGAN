@@ -1,5 +1,6 @@
 import torch
 from torch.utils.data import Dataset, DataLoader
+from torchvision.datasets import ImageFolder
 from torchvision.transforms import Compose, Normalize, ToTensor
 from pathlib import Path
 from PIL import Image

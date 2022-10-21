@@ -9,48 +9,8 @@ from EBGAN.dataset import DataModule_
 from torchvision.utils import make_grid
 import wandb
 from pytorch_lightning.loggers import WandbLogger
-from EBGAN.models import Encoder, Decoder, Embedding_labeled_latent
+from EBGAN.models import Generator, Discriminator
 from torchmetrics.image.fid import FrechetInceptionDistance
-
-
-
-class Generator(nn.Module):
-    def __init__(self, img_dim, latent_dim, num_class):
-        super(Generator, self).__init__()
-
-        self.embedding = Embedding_labeled_latent(latent_dim=latent_dim, num_class=num_class)
-        self.decoder = Decoder(img_dim=img_dim, latent_dim=latent_dim)
-
-
-    def forward(self, z, label):
-        latent = self.embedding(z, label)
-        gened_img = self.decoder(latent)
-
-        return gened_img
-
-class Discriminator(nn.Module):
-    def __init__(self, img_dim, latent_dim, num_class):
-        super(Discriminator, self).__init__()
-
-        self.encoder = Encoder(img_dim, latent_dim)
-
-        self.embedding = nn.Sequential(nn.Embedding(num_embeddings=num_class, embedding_dim=512),
-                                       nn.Flatten(),
-                                       nn.Linear(512, 256 * (4 * 4)),
-                                       nn.LeakyReLU(negative_slope=0.2, inplace=True))
-
-        self.discriminator = nn.Linear(256 * (4*4), 1)
-
-
-    def forward(self, img, label):
-        x = self.encoder.getFeatures(img)
-        x = torch.flatten(x, 1)
-
-        le = self.embedding(label)
-
-        out = x * le
-        out = self.discriminator(out)
-        return out
 
 
 class GAN(pl.LightningModule):

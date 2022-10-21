@@ -53,6 +53,30 @@ class Discriminator(nn.Module):
         return out
 
 
+class Discriminator2(nn.Module):
+    def __init__(self, img_dim, latent_dim, num_class):
+        super(Discriminator2, self).__init__()
+
+        self.encoder = Encoder(img_dim, latent_dim)
+
+        self.embedding = nn.Sequential(nn.Embedding(num_embeddings=num_class, embedding_dim=512),
+                                       nn.Flatten(),
+                                       nn.Linear(512, 256 * (4 * 4)),
+                                       nn.LeakyReLU(negative_slope=0.2, inplace=True))
+
+        self.discriminator = nn.Linear(256 * (4 * 4), 1)
+
+    def forward(self, img, label):
+        x = self.encoder.getFeatures(img)
+        x = torch.flatten(x, 1)
+
+        le = self.embedding(label)
+
+        out = x * le
+        out = self.discriminator(out)
+        return out
+
+
 class GAN(pl.LightningModule):
     def __init__(self, latent_dim, img_dim, num_class):
         super(GAN, self).__init__()

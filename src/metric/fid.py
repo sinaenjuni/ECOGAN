@@ -35,7 +35,7 @@ def frechet_inception_distance(mu1, sigma1, mu2, sigma2, eps=1e-6):
     return (diff.dot(diff) + np.trace(sigma1) + np.trace(sigma2) - 2 * tr_covmean)
 
 
-def calculate_mu_sigma(eval_loader, eval_model, quantize=True):
+def feature_stack_and_calculate_mu_sigma(eval_loader, eval_model, quantize=True):
     feat_list = []
     label_list = []
     for img, label in tqdm(eval_loader, desc="Calculating mu and sigma"):
@@ -49,16 +49,26 @@ def calculate_mu_sigma(eval_loader, eval_model, quantize=True):
     feat_list = feat_list.detach().cpu().numpy().astype(np.float64)
     label_list = np.concatenate(label_list)
 
-    feat_list_per_cls = [feat_list[np.where(label_list == idx)] for idx in np.unique(label_list)] + [feat_list]
+    mu, sigma, label_list = calculate_mu_sigma(feat_list, label_list)
 
-    mu = [np.mean(feat_list_per_cls_, axis=0) for feat_list_per_cls_ in feat_list_per_cls]
-    sigma = [np.cov(feat_list_per_cls_, rowvar=False) for feat_list_per_cls_ in feat_list_per_cls]
+    # feat_list_per_cls = [feat_list[np.where(label_list == idx)] for idx in np.unique(label_list)] + [feat_list]
+
+    # mu = [np.mean(feat_list_per_cls_, axis=0) for feat_list_per_cls_ in feat_list_per_cls]
+    # sigma = [np.cov(feat_list_per_cls_, rowvar=False) for feat_list_per_cls_ in feat_list_per_cls]
 
     # mu = np.mean(feat_list, axis=0)
     # sigma = np.cov(feat_list, rowvar=False)
 
     return mu, sigma, label_list
 
+
+def calculate_mu_sigma(feat_list, label_list):
+    feat_list_per_cls = [feat_list[np.where(label_list == idx)] for idx in np.unique(label_list)] + [feat_list]
+
+    mu = [np.mean(feat_list_per_cls_, axis=0) for feat_list_per_cls_ in feat_list_per_cls]
+    sigma = [np.cov(feat_list_per_cls_, rowvar=False) for feat_list_per_cls_ in feat_list_per_cls]
+
+    return mu, sigma, label_list
 
 
 if __name__ == "__main__":

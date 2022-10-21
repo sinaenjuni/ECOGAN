@@ -54,6 +54,12 @@ def inception_score(eval_loader, eval_model, quantize=True):
     return score, std, label_list
 
 
+def calculate_inception_score(ps_list, label_list):
+    ps_list_per_cls = [ps_list[torch.where(label_list == idx)] for idx in torch.unique(label_list)] + [ps_list]
+    score, std = zip(*[calculate_kl_div(ps_list_per_cls_, splits=10) for ps_list_per_cls_ in ps_list_per_cls])
+
+    return score, std, label_list
+
 if __name__ == '__main__':
     import torch
     from src.metric.inception_net import EvalModel
