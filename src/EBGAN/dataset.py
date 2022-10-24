@@ -1,7 +1,7 @@
 import pytorch_lightning as pl
 from torch.utils.data import DataLoader
 from torchvision.datasets import ImageFolder
-from torchvision.transforms import Compose, PILToTensor, Normalize, ToTensor
+from torchvision.transforms import Compose, PILToTensor, Normalize, ToTensor, Resize
 
 class DataModule_(pl.LightningDataModule):
     def __init__(self, path_train, batch_size, num_workers=4, pin_memory=True):
@@ -9,6 +9,7 @@ class DataModule_(pl.LightningDataModule):
         self.batch_size = batch_size
         self.path_train = path_train
         self.transforms = Compose([ToTensor(),
+                                   Resize(64),
                                    Normalize(mean=(0.5, 0.5, 0.5),
                                              std=(0.5, 0.5, 0.5))])
         self.num_workers = num_workers
@@ -51,10 +52,3 @@ if __name__ == "__main__":
     dataset = ImageFolder('/home/dblab/sin/save_files/refer/ebgan_cifar10', Compose([ToTensor(),
                                                                            Normalize(mean=(0.5, 0.5, 0.5),
                                                                                      std=(0.5, 0.5, 0.5))]))
-
-    type(dataset.targets)
-    type(dataset.imgs)
-    torch.where(dataset.targets == 2)
-
-
-
