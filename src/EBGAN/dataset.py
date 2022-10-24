@@ -46,3 +46,15 @@ if __name__ == "__main__":
 
     print(dm.train_dataloader())
     print(dm.val_dataloader())
+
+
+    dataset = ImageFolder('/home/dblab/sin/save_files/refer/ebgan_cifar10', Compose([ToTensor(),
+                                                                           Normalize(mean=(0.5, 0.5, 0.5),
+                                                                                     std=(0.5, 0.5, 0.5))]))
+
+    type(dataset.targets)
+    type(dataset.imgs)
+    torch.where(dataset.targets == 2)
+
+
+

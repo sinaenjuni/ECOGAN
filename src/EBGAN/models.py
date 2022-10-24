@@ -216,6 +216,7 @@ class Discriminator(nn.Module):
         x = self.encoder.getFeatures(img)
         x = torch.flatten(x, 1)
 
+        print(x.size())
         le = self.embedding(label)
 
         out = x * le

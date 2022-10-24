@@ -10,6 +10,12 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 import matplotlib.pyplot as plt
+from torchmetrics.functional import confusion_matrix
+import seaborn as sns
+from tqdm import tqdm
+# import wandb
+# wandb.init(project="BCE analysis", entity="sinaenjuni", name="imb-data_Hinge")
+
 
 
 class CIFAR10_LT(Dataset):
@@ -50,31 +56,41 @@ class CIFAR10_LT(Dataset):
 dataset = CIFAR10_LT(is_train=True, cls_target=(0, 1), transforms=Compose([ToTensor(),
                                                                            Normalize((0.5, 0.5, 0.5),
                                                                                      (0.5, 0.5, 0.5))]))
-np.unique(dataset.labels, return_counts=True)
+print(np.unique(dataset.labels, return_counts=True))
 loader = DataLoader(dataset, batch_size=128, shuffle=True)
 # img, label = iter(loader).__next__()
 
 test_dataset = CIFAR10_LT(is_train=False, cls_target=(0, 1), transforms=Compose([ToTensor(),
                                                                                  Normalize((0.5, 0.5, 0.5),
                                                                                             (0.5, 0.5, 0.5))]))
-test_loader = DataLoader(test_dataset, batch_size=128, shuffle=True)
+test_loader = DataLoader(test_dataset, batch_size=128, shuffle=False)
+
+
+encoder = resnet18(num_classes=2).cuda()
+# classifier = nn.Sequential(nn.ReLU(),
+#                            nn.Linear(2, 1, bias=False)).cuda()
+classifier = nn.Linear(2, 2, bias=False).cuda()
+# w = torch.tensor([[0.0, 1.0]], requires_grad=True).cuda()
+# w = F.normalize(w, dim=1)
+# torch.ran
+
+
+def hinge(y_hat, label):
+    return torch.mean( (  label) * F.relu(1. - y_hat)) +\
+           torch.mean( (1-label) * F.relu(1. + y_hat))
+
 
 def get_loss_relu(z, y):
     L = (y*F.relu(1-z)).sum(1) + ((1-y)*F.relu(1+z)).sum(1)
     return L.mean()
 
+
 def get_loss_numerically_stable(y, z):
     L = -1 * (y * -1 * torch.log(1 + torch.exp(-z)) +
-                (1-y) * (-z - torch.log(1 + torch.exp(-z))))
+              (1-y) * (-z - torch.log(1 + torch.exp(-z))))
     return L.mean()
 
-encoder = resnet18(num_classes=2).cuda()
-# classifier = nn.Sequential(nn.ReLU(),
-#                            nn.Linear(2, 2, bias=False)).cuda()
-classifier = nn.Linear(2, 1, bias=False).cuda()
-# w = torch.tensor([[0.0, 1.0]], requires_grad=True).cuda()
-# w = F.normalize(w, dim=1)
-# torch.ran
+
 
 # em = nn.Embedding(2, 2).cuda()
 # w = torch.nn.utils.weight_norm(em, dim=1)
@@ -97,13 +113,39 @@ color_test = np.array(['k','y'])
 
 # https://github.com/cvqluu/Angular-Penalty-Softmax-Losses-Pytorch/blob/c41d599622b6a6ba7e5be6faf3a01da1202024ea/loss_functions.py#L6
 
-def remove_diagonal(M):
-    batch_size = M.size(0)
-    mask = torch.ones_like(M).fill_diagonal_(0).bool()
+# def remove_diagonal(M):
+#     batch_size = M.size(0)
+#     mask = torch.ones_like(M).fill_diagonal_(0).bool()
+#     return M[mask].view(batch_size, -1).contiguous()
+#
+# s = 1
+# m = 4.0
 
-    return M[mask].view(batch_size, -1).contiguous()
-s = 1
-m = 4.0
+
+def vis(e_list, l_list):
+    plt.scatter(e_list[:, 0],
+                e_list[:, 1], c=color[l_list], alpha=0.3)
+
+    # xs = np.array([e_list[:,0].min(), e_list[:,0].max()])
+    # xs = np.array([-1.0, 1.0])
+    # for W in classifier.parameters():
+    #     W = F.normalize(W, dim=1)
+
+    # w1 = classifier[1].weight.cpu().detach().numpy()[0][0]
+    # w2 = classifier[1].weight.cpu().detach().numpy()[0][1]
+    # b = classifier[1].bias.cpu().detach().numpy()[0]
+
+    # plt.scatter(w1,
+    #             w2, c='black', s=100, alpha=.3)
+
+    # ys = (-w1 * xs - b) / w2
+    # ys = (-w1 * xs) / w2
+    # plt.plot(xs, ys, c='black')
+    plt.xlim([-2.0, 2.0])
+    plt.ylim([-2.0, 2.0])
+    plt.show()
+
+
 for i in range(50):
     total_loss = 0
     e_list = []
@@ -121,18 +163,31 @@ for i in range(50):
         y_hat = classifier(e)
         y_hat = y_hat.squeeze()
 
+        # loss = hinge(y_hat, label).mean()
+        # loss = F.binary_cross_entropy_with_logits(y_hat, label.float())
+
+        # numerator = s * (torch.diagonal(y_hat.transpose(0, 1)[label]) - m)
+        numerator = torch.diagonal(y_hat.transpose(0, 1)[label] - 1)
+        # excl = torch.cat([torch.cat((wf[i, :y], wf[i, y+1:])).unsqueeze(0) for i, y in enumerate(label)], dim=0)
+        excl = torch.diagonal(y_hat.transpose(0, 1)[1-label])
+
+        denominator = torch.exp(numerator) + torch.sum(torch.exp(excl))
+        L = numerator - torch.log(denominator)
+        loss = -torch.mean(L)
+
+
         # numerator = s * (torch.diagonal(y_hat.transpose(0, 1)[label]) - m)
         # excl = torch.cat([torch.cat((y_hat[i, :y], y_hat[i, y + 1:])).unsqueeze(0) for i, y in enumerate(label)], dim=0)
         # denominator = torch.exp(numerator) + torch.sum(torch.exp(s * excl), dim=1)
         # L = numerator - torch.log(denominator)
         # loss = -torch.mean(L)
 
-        improved_sim_matrix = (1 - label) * torch.exp(y_hat)
-        pos_attr = label * F.relu((0.9 - y_hat))
+        # improved_sim_matrix = (1 - label) * torch.exp(y_hat)
+        # pos_attr = label * F.relu((0.9 - y_hat))
         # compute negative repulsion term
-        neg_repul = torch.log(torch.exp(-pos_attr) + improved_sim_matrix.sum())
+        # neg_repul = torch.log(torch.exp(-pos_attr) + improved_sim_matrix.sum())
         # compute data to data cross-entropy criterion
-        loss = (pos_attr + neg_repul).mean()
+        # loss = (pos_attr + neg_repul).mean()
 
 
 
@@ -194,7 +249,6 @@ for i in range(50):
         # for W in classifier.parameters():
         #     W = F.normalize(W, dim=1)
         # pos_weight = torch.ones_like(label) * 2
-        # loss = F.binary_cross_entropy_with_logits(y_hat.squeeze(), label.float())
         # loss = get_loss_relu(y_hat.squeeze(), label.float())\
         # loss = get_loss_numerically_stable(label, y_hat)
 
@@ -205,37 +259,48 @@ for i in range(50):
 
         # e = F.normalize(e, dim=1)
 
-        e_list.append(e.cpu().detach().numpy())
-        l_list.append(label.cpu().detach().numpy())
-        y_hat_list.append(y_hat.cpu().detach().numpy())
+        e_list.append(e.cpu().detach())
+        l_list.append(label.cpu().detach())
+        y_hat_list.append(y_hat.cpu().detach())
 
-    e_list = np.concatenate(e_list)
-    l_list = np.concatenate(l_list)
-    y_hat_list = np.concatenate(y_hat_list)
-    plt.scatter(e_list[:,0],
-                e_list[:,1], c=color[l_list], alpha=0.3)
+    # e_list = np.concatenate(e_list)
+    # l_list = np.concatenate(l_list)
+    # y_hat_list = np.concatenate(y_hat_list)
 
-    # xs = np.array([e_list[:,0].min(), e_list[:,0].max()])
-    xs = np.array([-2.0, 2.0])
-    for W in classifier.parameters():
-        W = F.normalize(W, dim=1)
-    w1 = classifier.weight.cpu().detach().numpy()[0][0]
-    w2 = classifier.weight.cpu().detach().numpy()[0][1]
+    e_list = torch.cat(e_list)
+    l_list = torch.cat(l_list)
+    y_hat_list = torch.cat(y_hat_list)
 
-    plt.scatter(w1,
-                w2, c='black', s=100, alpha=.3)
 
-    # b = classifier[1].bias.cpu().detach().numpy()[0]
-    # ys = (-w1 * xs - b) / w2
-    ys = (-w1 * xs) / w2
-    plt.plot(xs, ys, c='black')
-    plt.xlim([-2.0, 2.0])
-    plt.ylim([-2.0, 2.0])
-    plt.show()
 
-    acc = (y_hat_list.argmax(-1) == l_list).sum()/len(l_list)
-    # acc = ((y_hat_list > 0.5) == l_list).sum()/len(l_list)
-    print(total_loss/len(loader), acc)
+    # acc = (y_hat_list.argmax(-1) == l_list).sum()/len(l_list)
+    # acc = ((y_hat_list > 1.) == l_list).sum()/len(l_list)
+
+    cm = confusion_matrix(preds=y_hat_list, target=l_list, num_classes=2, threshold=0.5)
+    acc = cm.diagonal().sum() / len(l_list)
+    acc_per_cls = cm.diagonal() / cm.sum(1)
+    print(cm)
+    print(total_loss/len(loader),
+          acc,
+          acc_per_cls)
+
+    vis(e_list, l_list)
+
+    # try:
+    #     plt.figure(figsize=(10, 10))
+    #     heat_map = sns.heatmap(cm.numpy(), annot=True, fmt='d')
+    #     wandb.log({'Confusion matrix': wandb.Image(heat_map),
+    #                'acc': acc})
+    #
+    #     wandb.log({f'acc_per_cls/{i}': acc_per_cls_ for i, acc_per_cls_ in enumerate(acc_per_cls)})
+    # except NameError:
+    #     print("Not defined Wandb")
+
+
+
+
+
+    # print(total_loss/len(loader), acc)
 
     print(y_hat_list.min(),
           y_hat_list.max(),
@@ -247,37 +312,56 @@ for i in range(50):
 test_y_hat_list = []
 test_e_list = []
 test_l_list = []
-for img, label in test_loader:
+for img, label in tqdm(test_loader, desc="Testing"):
     img, label = img.cuda(), label.cuda()
-    test_e = encoder(img)
-    test_e = F.normalize(test_e, dim=1)
-    test_y_hat = classifier(test_e)
+    with torch.no_grad():
+        test_e = encoder(img)
+        test_e = F.normalize(test_e, dim=1)
+
+        for W in classifier.parameters():
+            W = F.normalize(W, dim=1)
+        test_y_hat = classifier(test_e)
 
     test_y_hat = test_y_hat.squeeze()
-    test_y_hat_list.append(test_y_hat.cpu().detach().numpy())
-    test_e_list.append(test_e.cpu().detach().numpy())
-    test_l_list.append(label.cpu().detach().numpy())
+    # test_y_hat_list.append(test_y_hat.cpu().detach().numpy())
+    # test_e_list.append(test_e.cpu().detach().numpy())
+    # test_l_list.append(label.cpu().detach().numpy())
 
-test_y_hat_list = np.concatenate(test_y_hat_list)
-test_e_list = np.concatenate(test_e_list)
-test_l_list = np.concatenate(test_l_list)
+    test_y_hat_list.append(test_y_hat)
+    test_e_list.append(test_e)
+    test_l_list.append(label)
 
-plt.scatter(test_e_list[:, 0],
-            test_e_list[:, 1], c=color[test_l_list], alpha=0.3)
 
-xs = np.array([-2.0, 2.0])
-w1 = classifier.weight.cpu().detach().numpy()[0][0]
-w2 = classifier.weight.cpu().detach().numpy()[0][1]
-ys = (-w1 * xs) / w2
-plt.plot(xs, ys, c='black')
+# test_y_hat_list = np.concatenate(test_y_hat_list)
+# test_e_list = np.concatenate(test_e_list)
+# test_l_list = np.concatenate(test_l_list)
 
-plt.xlim([-2.0, 2.0])
-plt.ylim([-2.0, 2.0])
-plt.show()
+test_y_hat_list = torch.cat(test_y_hat_list)
+test_e_list = torch.cat(test_e_list)
+test_l_list = torch.cat(test_l_list)
 
-acc = (test_y_hat_list.argmax(-1) == test_l_list).sum() / len(l_list)
-# acc = ((test_y_hat_list > 0.5) == test_l_list).sum() / len(test_l_list)
-print(acc)
+cm_test = confusion_matrix(test_y_hat_list, test_l_list, num_classes=2)
+acc_test = cm_test.diagonal().sum() / len(test_l_list)
+acc_per_cls_test = cm_test.diagonal() / cm_test.sum(1)
+print(cm_test)
+print(acc_test,
+      acc_per_cls_test)
+# plt.scatter(test_e_list[:, 0],
+#             test_e_list[:, 1], c=color[test_l_list], alpha=0.3)
+#
+# xs = np.array([-2.0, 2.0])
+# w1 = classifier.weight.cpu().detach().numpy()[0][0]
+# w2 = classifier.weight.cpu().detach().numpy()[0][1]
+# ys = (-w1 * xs) / w2
+# plt.plot(xs, ys, c='black')
+#
+# plt.xlim([-2.0, 2.0])
+# plt.ylim([-2.0, 2.0])
+# plt.show()
+#
+# acc = (test_y_hat_list.argmax(-1) == test_l_list).sum() / len(l_list)
+# # acc = ((test_y_hat_list > 0.5) == test_l_list).sum() / len(test_l_list)
+# print(acc)
 
 # idx = np.where(test_l_list == 0)
 # ((test_y_hat_list[idx] > 0.5) == test_l_list[idx]).sum() / len(test_l_list[idx])

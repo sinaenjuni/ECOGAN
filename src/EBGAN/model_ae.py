@@ -9,8 +9,8 @@ import wandb
 from pytorch_lightning.loggers import WandbLogger
 from EBGAN.models import Encoder, Decoder, Embedding_labeled_latent
 
-wandb.login(key = '6afc6fd83ea84bf316238272eb71ef5a18efd445')
-wandb.init(project='GAN')
+# wandb.login(key = '6afc6fd83ea84bf316238272eb71ef5a18efd445')
+# wandb.init(project='MYGAN', name='BEGAN-AE')
 
 
 class Autoencoder(pl.LightningModule):
@@ -20,6 +20,9 @@ class Autoencoder(pl.LightningModule):
         self.decoder = Decoder(img_dim=img_dim, latent_dim=latent_dim)
         self.embedding = Embedding_labeled_latent(latent_dim=latent_dim, num_class=num_class)
 
+
+
+
     def forward(self, img, label):
         x = self.encoder(img)
         x = self.embedding(x, label)
@@ -28,8 +31,10 @@ class Autoencoder(pl.LightningModule):
 
     def training_step(self, batch):
         img, label = batch
+
         y_hat = self(img, label)
         loss = self.mes_loss(y_hat, img)
+
         log_dict = {"train_loss": loss}
         self.log_dict(log_dict, prog_bar=True, logger=True)
         return {'loss': loss, 'y_hat': y_hat}
@@ -54,6 +59,11 @@ class Autoencoder(pl.LightningModule):
         # sample_imgs = [:10]
         # grid = make_grid(sample_imgs)
         # self.logger.experiment.add_image('imgs', grid)
+
+    def validation_step(self, batch):
+        print(batch)
+        # img, label = batch
+
 
     def configure_optimizers(self):
         return Adam(self.parameters(), lr=0.0002, betas=(0.5, 0.9))
@@ -85,9 +95,9 @@ if __name__ == "__main__":
 
     # model
 
-    wandb_logger = WandbLogger(project="GAN")
+    wandb_logger = WandbLogger(project='MYGAN', name='BEGAN-AE')
     trainer = pl.Trainer(
-        # fast_dev_run=True,
+        fast_dev_run=True,
         max_epochs=30,
         callbacks=[pl.callbacks.ModelCheckpoint(monitor="train_loss", mode='min')],
         logger=wandb_logger,

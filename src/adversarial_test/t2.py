@@ -20,7 +20,34 @@ latent_dim = 128
 batch_size = 128
 lr_g = 0.0002
 lr_d = 0.0002
-num_epoch = 500
+num_epoch = 100
+
+
+# class MyFashionMNIST(FashionMNIST):
+#     def __init__(self, cls_target, **args):
+#         super(MyFashionMNIST, self).__init__(**args)
+#         if cls_target is not None:
+#             label_target = []
+#             image_target = []
+#             for cls, count in cls_target.items():
+#                 idx_target = torch.where(self.targets == cls)[0]
+#                 label_target.append(self.targets[idx_target][:count])
+#                 image_target.append(self.data[idx_target][:count])
+#
+#             self.data = torch.cat(image_target)
+#             self.targets = torch.cat(label_target)
+#
+#
+# dataset = MyFashionMNIST(root='/shared_hdd/sin/dataset',
+#                          cls_target={0: 6000,
+#                                      1: 6000},
+#                          download=True,
+#                          train=True,
+#                         transform=Compose([ToTensor(),
+#                                             Resize(64),
+#                                             Normalize([0.5],
+#                                                      [0.5])]))
+#
 
 # dataset = FashionMNIST(root='/shared_hdd/sin/dataset', download=False, train=True,
 #                 transform=Compose([ToTensor(),
@@ -59,14 +86,13 @@ mu_sigma_train = np.load('/shared_hdd/sin/save_files/img_cifar10.npz')
 mu_train, sigma_train = mu_sigma_train['mu'], mu_sigma_train['sigma']
 
 
-def save_train_data_mu_sigma():
-    mu, sigma, label_list = fid.calculate_mu_sigma(data_loader, eval_model, True)
-    np.savez('/shared_hdd/sin/save_files/img_cifar10.npz', mu=mu, sigma=sigma, label_list=label_list)
+# def save_train_data_mu_sigma():
+#     mu, sigma, label_list = fid.calculate_mu_sigma(data_loader, eval_model, True)
+#     np.savez('/shared_hdd/sin/save_files/img_cifar10.npz', mu=mu, sigma=sigma, label_list=label_list)
 
 # fid.frechet_inception_distance()
 
 # m_scroe, std, label_list = ins.inception_score(data_loader, eval_model, quantize=True)
-
 
 
 
@@ -79,8 +105,8 @@ D = Discriminator(img_dim, latent_dim, num_classes).cuda()
 # adv_output = encoder(img.cuda())
 # print(img_fake.size())
 
-optimizer_g = torch.optim.Adam(params=G.parameters(), lr=lr_g, betas=(0.5,0.999))
-optimizer_d = torch.optim.Adam(params=D.parameters(), lr=lr_d, betas=(0.5,0.999))
+optimizer_g = torch.optim.Adam(params=G.parameters(), lr=lr_g, betas=(0.5, 0.999))
+optimizer_d = torch.optim.Adam(params=D.parameters(), lr=lr_d, betas=(0.5, 0.999))
 
 
 def d_loss_fn(real_logits, fake_logits, wrong_logits):
@@ -132,8 +158,8 @@ for epoch in range(num_epoch):
         img_real = img.cuda()
         label_real = label.cuda()
         z = torch.randn(img_real.size(0), latent_dim).cuda()
-        label_fake = (torch.rand( (label_real.size(0),))*10).to(torch.long).cuda()
-        label_wrong = (torch.rand( (label_real.size(0),))*10).to(torch.long).cuda()
+        label_fake = (torch.rand( (label_real.size(0),)) * num_classes).to(torch.long).cuda()
+        label_wrong = (torch.rand( (label_real.size(0),)) * num_classes).to(torch.long).cuda()
 
         for i in range(5):
             optimizer_d.zero_grad()
@@ -156,12 +182,12 @@ for epoch in range(num_epoch):
         optimizer_g.step()
 
         loader_tqdm.set_description(f'epoch {epoch}')
-        loader_tqdm.set_postfix({'d_loss':d_loss.item(),
-                                 'g_loss':g_loss.item()})
+        loader_tqdm.set_postfix({'d_loss': d_loss.item(),
+                                 'g_loss': g_loss.item()})
 
     with torch.no_grad():
-        z = torch.randn(10, latent_dim).repeat(10, 1).cuda()
-        label = torch.arange(0, 10).view(-1, 1).repeat(1, 10).flatten().cuda()
+        z = torch.randn(10, latent_dim).repeat(num_classes, 1).cuda()
+        label = torch.arange(0, num_classes).view(-1, 1).repeat(1, 10).flatten().cuda()
         grid = make_grid(G(z, label), normalize=True, nrow=10)
         plt.imshow(grid.permute(1,2,0).cpu())
         plt.show()
@@ -186,15 +212,15 @@ for epoch in range(num_epoch):
 
     em_list = em_list.cpu().numpy().astype(np.float64)
     mu_fake, sigma_fake, _ = fid.calculate_mu_sigma(em_list, targets)
-
-
-    for mu_train_, sigma_train_, mu_fake_, sigma_fake_ in zip(mu_train, sigma_train, mu_fake, sigma_fake):
-        # print(mu_train_, sigma_train_, mu_fake_, sigma_fake_)
-        fid_score = fid.frechet_inception_distance(mu_train_, sigma_train_, mu_fake_, sigma_fake_)
-        print(fid_score)
-
-
-    score, std, _ = ins.calculate_inception_score(ps_list, targets)
+    #
+    #
+    # for mu_train_, sigma_train_, mu_fake_, sigma_fake_ in zip(mu_train, sigma_train, mu_fake, sigma_fake):
+    #     # print(mu_train_, sigma_train_, mu_fake_, sigma_fake_)
+    #     fid_score = fid.frechet_inception_distance(mu_train_, sigma_train_, mu_fake_, sigma_fake_)
+    #     print(fid_score)
+    #
+    #
+    # score, std, _ = ins.calculate_inception_score(ps_list, targets)
 
 
 
