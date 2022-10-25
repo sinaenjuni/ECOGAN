@@ -5,17 +5,18 @@ import pytorch_lightning as pl
 from torch.optim import Adam
 from collections import OrderedDict
 
-from dataset import DataModule_
+from src.EBGAN.dataset import DataModule_
 from torchvision.utils import make_grid
 import wandb
 from pytorch_lightning.loggers import WandbLogger
-from models import Encoder, Decoder, Embedding_labeled_latent
+from src.EBGAN.models import Encoder, Decoder, Embedding_labeled_latent
 from torchmetrics.image.fid import FrechetInceptionDistance
 from torchmetrics.image.inception import InceptionScore
 from metric.inception_net import EvalModel
 from metric.ins import calculate_kl_div
 from metric.fid import calculate_mu_sigma, frechet_inception_distance
 import numpy as np
+
 
 class Generator(nn.Module):
     def __init__(self, img_dim, latent_dim, num_class):
@@ -250,10 +251,16 @@ class GAN(pl.LightningModule):
         return fake_loss
 
 
-
-
-
 if __name__ == "__main__":
+    model = GAN(latent_dim=128, img_dim=3, num_class=10)
+
+    # disable randomness, dropout, etc...
+    model.eval()
+
+    # predict with the model
+    y_hat = model(x)
+
+
     # decoder = Decoder(3, 128)
     # z = torch.randn(100, 128)
     # output = decoder(z)
@@ -271,15 +278,14 @@ if __name__ == "__main__":
 
     # dm = DataModule_(path_train='/home/dblab/sin/save_files/refer/ebgan_cifar10', batch_size=128)
     dm = DataModule_(path_train='/home/dblab/git/PyTorch-StudioGAN/data/imb_cifar10/train', batch_size=128, num_workers=4)
-    model = GAN(latent_dim=128, img_dim=3, num_class=10,
-                pre_train_path='/shared_hdd/sin/save_files/EBGAN/MYGAN/EBGAN-AE_my-data/checkpoints/epoch=24-step=1875.ckpt')
+    model = GAN(latent_dim=128, img_dim=3, num_class=10)
 
     # model
 
     # wandb.login(key='6afc6fd83ea84bf316238272eb71ef5a18efd445')
     # wandb.init(project='MYGAN', name='BEGAN-GAN')
 
-    wandb_logger = WandbLogger(project='MYGAN', name='BEGAN-GAN_pre-trained')
+    wandb_logger = WandbLogger(project='MYGAN', name='ECOGAN_adv')
     trainer = pl.Trainer(
         # fast_dev_run=True,
         default_root_dir='/shared_hdd/sin/save_files/EBGAN/',
