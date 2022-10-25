@@ -12,7 +12,7 @@ from src.metric.inception_net import EvalModel
 import numpy as np
 from torchvision.utils import make_grid
 import matplotlib.pyplot as plt
-from src.EBGAN.model_gan import Generator, Discriminator
+from src.EBGAN.training_EBGAN import Generator, Discriminator
 
 img_dim = 3
 num_classes = 10
