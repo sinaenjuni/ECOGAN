@@ -83,12 +83,14 @@ if __name__ == "__main__":
     # le = Embedding_labeled_latent(128, 10)
     # output = le(z, label)
 
-    dm = DataModule_(path_train='/home/dblab/sin/save_files/refer/ebgan_cifar10', batch_size=128)
+    # dm = DataModule_(path_train='/home/dblab/sin/save_files/refer/ebgan_cifar10', batch_size=128)
+    dm = DataModule_(path_train='/home/dblab/git/PyTorch-StudioGAN/data/imb_cifar10/train', batch_size=128)
+
     model = Autoencoder(latent_dim=128, img_dim=3, num_class=10)
 
     # model
 
-    wandb_logger = WandbLogger(project='MYGAN', name='BEGAN-AE')
+    wandb_logger = WandbLogger(project='MYGAN', name='BEGAN-AE_my-data')
     trainer = pl.Trainer(
         default_root_dir='/shared_hdd/sin/save_files/EBGAN/',
         fast_dev_run=False,

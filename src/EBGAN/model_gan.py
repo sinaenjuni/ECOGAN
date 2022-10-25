@@ -86,8 +86,8 @@ class GAN(pl.LightningModule):
 
         self.latent_dim = latent_dim
         # self.fid = FrechetInceptionDistance()
-        self.eval_model = EvalModel(self.device)
 
+        self.eval_model = EvalModel()
         self.G = Generator(img_dim=img_dim, latent_dim=latent_dim, num_class=num_class)
         self.D = Discriminator(img_dim=img_dim, latent_dim=latent_dim, num_class=num_class)
 
@@ -162,7 +162,7 @@ class GAN(pl.LightningModule):
             z = torch.randn((imgs.size(0), self.latent_dim)).to(self.device)
             img_fake = self(z, labels)
 
-            embeddings, logits = self.eval_model.get_outputs(img_fake, quantize=True)
+            embeddings, logits = self.eval_model(img_fake, quantize=True)
             ps = torch.nn.functional.softmax(logits, dim=1)
             # ps_list.append(ps)
             # em_list.append(embeddings)
@@ -177,7 +177,7 @@ class GAN(pl.LightningModule):
         # print(embedding.size())
 
         ins_score, ins_std = calculate_kl_div(ps, 10)
-        mu_target, sigma_target = calculate_mu_sigma(embedding.numpy())
+        mu_target, sigma_target = calculate_mu_sigma(embedding.cpu().numpy())
         fid_score = frechet_inception_distance(self.mu_original, self.sigma_original, mu_target, sigma_target)
 
         # print('ins_score', ins_score)
@@ -270,15 +270,15 @@ if __name__ == "__main__":
     # output = le(z, label)
 
     # dm = DataModule_(path_train='/home/dblab/sin/save_files/refer/ebgan_cifar10', batch_size=128)
-    dm = DataModule_(path_train='/home/dblab/git/PyTorch-StudioGAN/data/imb_cifar10/train', batch_size=128)
-    model = GAN(latent_dim=128, img_dim=3, num_class=10)
+    dm = DataModule_(path_train='/home/dblab/git/PyTorch-StudioGAN/data/imb_cifar10/train', batch_size=128, num_workers=4)
+    model = GAN(latent_dim=128, img_dim=3, num_class=10, pre_train_path='/shared_hdd/sin/save_files/EBGAN/MYGAN/EBGAN-AE_my-data/checkpoints/epoch=24-step=1875.ckpt')
 
     # model
 
     # wandb.login(key='6afc6fd83ea84bf316238272eb71ef5a18efd445')
     # wandb.init(project='MYGAN', name='BEGAN-GAN')
 
-    wandb_logger = WandbLogger(project='MYGAN', name='BEGAN-GAN')
+    wandb_logger = WandbLogger(project='MYGAN', name='BEGAN-GAN_pre-trained')
     trainer = pl.Trainer(
         # fast_dev_run=True,
         default_root_dir='/shared_hdd/sin/save_files/EBGAN/',
