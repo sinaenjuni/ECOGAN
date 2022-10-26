@@ -15,7 +15,6 @@ from pathlib import Path
 from PIL import Image
 
 
-
 class MergeDataset(Dataset):
     def __init__(self, path1, path2, transform=None):
         self.path1 = Path(path1)
@@ -46,9 +45,15 @@ class MergeDataset(Dataset):
         return img, label
 
 ori_imb_data_path = "/home/dblab/git/PyTorch-StudioGAN/data/imb_cifar10/train"
-paths = {"EBGAN_gened_data_path" : "/home/dblab/git/EBGAN/save_files/EBGAN_restore_data",
-         "ContraGAN_gened_data_path" : "/home/dblab/git/ECOGNA/save_files/contraGAN_restore_data",
-         "ECOGAN_gened_data_path" : "/home/dblab/git/ECOGNA/save_files/ECOGAN_restore_data"}
+# paths = {"EBGAN_gened_data_path" : "/home/dblab/git/EBGAN/save_files/EBGAN_restore_data",
+#          "ContraGAN_gened_data_path" : "/home/dblab/git/ECOGNA/save_files/contraGAN_restore_data",
+#          "ECOGAN_gened_data_path" : "/home/dblab/git/ECOGNA/save_files/ECOGAN_restore_data"}
+
+paths = {"EBGAN_gened_data_path" : "/shared_hdd/sin/save_files/gened_img/EBGAN",
+         "BEGAN_pre-trained_gened_data_path" : "/shared_hdd/sin/save_files/gened_img/EBGAN_pre-trained",
+         # "ECOGAN_gened_data_path" : "/shared_hdd/sin/save_files/gened_img/ECOGAN"
+        }
+
 
 for data_name, data_path in paths.items():
     print(data_name)

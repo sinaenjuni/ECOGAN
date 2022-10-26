@@ -16,125 +16,8 @@ from metric.inception_net import EvalModel
 from metric.ins import calculate_kl_div
 from metric.fid import calculate_mu_sigma, frechet_inception_distance
 import numpy as np
-
-class Generator(nn.Module):
-    def __init__(self, img_dim, latent_dim, num_class):
-        super(Generator, self).__init__()
-
-        self.embedding = Embedding_labeled_latent(latent_dim=latent_dim, num_class=num_class)
-        self.decoder = Decoder(img_dim=img_dim, latent_dim=latent_dim)
-
-
-    def forward(self, z, label):
-        latent = self.embedding(z, label)
-        gened_img = self.decoder(latent)
-
-        return gened_img
-
-
-class Discriminator_EC(nn.Module):
-    def __init__(self, img_dim, latent_dim, num_class, d_embed_dim):
-        super(Discriminator_EC, self).__init__()
-
-        self.encoder = Encoder(img_dim, latent_dim)
-        self.linear1 = nn.Linear(in_features=self.encoder.dims[3], out_features=1, bias=True)
-        self.linear2 = nn.Linear(in_features=self.encoder.dims[3], out_features=d_embed_dim, bias=True)
-        self.embedding = nn.Embedding(num_embeddings=num_class, embedding_dim=d_embed_dim)
-
-        # self.embedding = nn.Sequential(nn.Embedding(num_embeddings=num_class, embedding_dim=512),
-        #                                nn.Flatten(),
-        #                                nn.Linear(512, 256 * (4 * 4)),
-        #                                nn.LeakyReLU(negative_slope=0.2, inplace=True))
-
-        # self.discriminator = nn.Linear(256 * (4*4), 1)
-
-
-    def forward(self, img, label):
-        x = self.encoder.getFeatures(img)
-        x = torch.sum(x, dim=[2,3])
-        adv_output = self.linear1(x)
-
-        embed_data = self.linear2(x)
-        embed_label = self.embedding(label)
-
-        embed_data = F.normalize(embed_data, dim=1)
-        embed_label = F.normalize(embed_label, dim=1)
-
-        return adv_output, embed_data, embed_label
-
-
-
-class ExhustiveContrastiveLoss(nn.Module):
-    def __init__(self, num_classes, temperature):
-        super(ExhustiveContrastiveLoss, self).__init__()
-        self.num_classes = num_classes
-        self.temperature = temperature
-        self.calculate_similarity_matrix = self._calculate_similarity_matrix()
-        self.cosine_similarity = torch.nn.CosineSimilarity(dim=-1)
-
-    def _make_neg_removal_mask(self, labels):
-        labels = labels.detach().cpu().numpy()
-        n_samples = labels.shape[0]
-        mask_multi, target = np.zeros([self.num_classes, n_samples]), 1.0
-        for c in range(self.num_classes):
-            c_indices = np.where(labels == c)
-            mask_multi[c, c_indices] = target
-        return torch.tensor(mask_multi).type(torch.long)
-
-    # def make_index_matrix(self, labels):
-    #     labels = labels.detach().cpu().numpy()
-    #     num_samples = labels.shape[0]
-    #     mask_multi, target = np.ones([self.num_classes, num_samples]), 0.0
-    #
-    #     for c in range(self.num_classes):
-    #         c_indices = np.where(labels==c)
-    #         mask_multi[c, c_indices] = target
-    #     return torch.tensor(mask_multi).type(torch.long).to(self.master_rank)
-
-    def _calculate_similarity_matrix(self):
-        return self._cosine_simililarity_matrix
-
-    def _remove_diag(self, M):
-        h, w = M.shape
-        assert h == w, "h and w should be same"
-        mask = np.ones((h, w)) - np.eye(h)
-        mask = torch.from_numpy(mask)
-        mask = (mask).type(torch.bool)
-        return M[mask].view(h, -1)
-
-    def _cosine_simililarity_matrix(self, x, y):
-        v = self.cosine_similarity(x.unsqueeze(1), y.unsqueeze(0))
-        return v
-
-    def forward(self, embed_data, embed_label, label, **_):
-        device = torch.device(embed_data.device)
-        f2f_sim = self.calculate_similarity_matrix(embed_data, embed_data)
-        f2f_sim = self._remove_diag(f2f_sim)
-        f2f_max, _ = torch.max(f2f_sim, dim=1, keepdim=True)
-
-        f2f_logits = f2f_sim - f2f_max.detach()
-        f2f_logits = torch.exp(f2f_logits / self.temperature)
-
-        pos_mask_redia = self._remove_diag(self._make_neg_removal_mask(label)[label]).to(device)
-        f2f_logits_pos_only = pos_mask_redia * f2f_logits
-
-        # emb2proxy = torch.exp(self.cosine_similarity(embed_data, embed_label) / self.temperature)
-
-        e2p_sim = self.calculate_similarity_matrix(embed_data, embed_label)
-        e2p_max, _ = torch.max(e2p_sim, dim=1, keepdim=True)
-
-        e2p_logits = e2p_sim - e2p_max.detach()
-        e2p_logits = torch.exp(e2p_logits / self.temperature)
-
-        pos_mask = self._make_neg_removal_mask(label)[label].to(device)
-        e2p_logits_pos_only = pos_mask * e2p_logits
-
-
-        # numerator = emb2proxy + sim_pos_only.sum(dim=1)
-        numerator = e2p_logits_pos_only.sum(dim=1) + f2f_logits_pos_only.sum(dim=1)
-        denomerator = e2p_logits.sum(dim=1) + f2f_logits.sum(dim=1)
-        return -torch.log(numerator / denomerator).mean()
-
+from models import Generator, Discriminator_EC
+from losses import ExhustiveContrastiveLoss
 
 class GAN(pl.LightningModule):
     def __init__(self, latent_dim, img_dim, num_class, pre_train_path=None):
@@ -145,7 +28,7 @@ class GAN(pl.LightningModule):
 
         self.eval_model = EvalModel()
         self.G = Generator(img_dim=img_dim, latent_dim=latent_dim, num_class=num_class)
-        self.D = Discriminator_EC(img_dim=img_dim, latent_dim=latent_dim, num_class=num_class, d_embed_dim=256)
+        self.D = Discriminator_EC(img_dim=img_dim, latent_dim=latent_dim, num_class=num_class, d_embed_dim=512)
 
         mu_sigma_train = np.load('/shared_hdd/sin/save_files/img_cifar10.npz')
         self.mu_original, self.sigma_original = mu_sigma_train['mu'][-1], mu_sigma_train['sigma'][-1]
@@ -337,10 +220,10 @@ if __name__ == "__main__":
     wandb_logger = WandbLogger(project='MYGAN', name='ECOGAN')
     trainer = pl.Trainer(
         # fast_dev_run=True,
-        default_root_dir='/shared_hdd/sin/save_files/EBGAN/',
+        default_root_dir='/shared_hdd/sin/save_files/ECOGAN-512/',
         max_epochs=100,
         # callbacks=[EarlyStopping(monitor='val_loss')],
-        callbacks=[pl.callbacks.ModelCheckpoint(filename="EBGAN-{epoch:02d}-{fid}",
+        callbacks=[pl.callbacks.ModelCheckpoint(filename="ECOGAN-512-{epoch:02d}-{fid}",
                                                 monitor="fid", mode='min')],
         logger=wandb_logger,
         # logger=False,

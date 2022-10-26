@@ -74,8 +74,6 @@ class Decoder(nn.Module):
         x = torch.tanh_(x)
         return x
 
-
-
 class Encoder(nn.Module):
     # def getLayer(self, num_input, num_output, kernel_size, stride, padding, norm, is_flatten):
     #     if norm == "sp":
@@ -182,7 +180,6 @@ class Embedding_labeled_latent(nn.Module):
         return le
 
 
-
 class Generator(nn.Module):
     def __init__(self, img_dim, latent_dim, num_class):
         super(Generator, self).__init__()
@@ -196,8 +193,6 @@ class Generator(nn.Module):
         gened_img = self.decoder(latent)
 
         return gened_img
-
-
 
 class Discriminator(nn.Module):
     def __init__(self, img_dim, latent_dim, num_class):
@@ -217,13 +212,11 @@ class Discriminator(nn.Module):
         x = self.encoder.getFeatures(img)
         x = torch.flatten(x, 1)
 
-        print(x.size())
         le = self.embedding(label)
 
         out = x * le
         out = self.discriminator(out)
         return out
-
 
 class Discriminator_EC(nn.Module):
     def __init__(self, img_dim, latent_dim, num_class, d_embed_dim):
@@ -254,6 +247,8 @@ class Discriminator_EC(nn.Module):
         embed_label = F.normalize(embed_label, dim=1)
 
         return adv_output, embed_data, embed_label
+
+
 
 
 

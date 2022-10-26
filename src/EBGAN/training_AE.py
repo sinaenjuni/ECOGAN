@@ -14,12 +14,15 @@ from src.EBGAN.models import Encoder, Decoder, Embedding_labeled_latent
 
 
 class Autoencoder(pl.LightningModule):
-    def __init__(self, latent_dim, img_dim, num_class):
+    def __init__(self, encoder, decoder, embedding):
         super(Autoencoder, self).__init__()
-        self.encoder = Encoder(img_dim=img_dim, latent_dim=latent_dim)
-        self.decoder = Decoder(img_dim=img_dim, latent_dim=latent_dim)
-        self.embedding = Embedding_labeled_latent(latent_dim=latent_dim, num_class=num_class)
-
+        self.save_hyperparameters()
+        # self.encoder = Encoder(img_dim=img_dim, latent_dim=latent_dim)
+        # self.decoder = Decoder(img_dim=img_dim, latent_dim=latent_dim)
+        # self.embedding = Embedding_labeled_latent(latent_dim=latent_dim, num_class=num_class)
+        self.encoder = encoder
+        self.decoder = decoder
+        self.embedding = embedding
 
     def forward(self, img, label):
         x = self.encoder(img)
@@ -86,20 +89,36 @@ if __name__ == "__main__":
     # dm = DataModule_(path_train='/home/dblab/sin/save_files/refer/ebgan_cifar10', batch_size=128)
     dm = DataModule_(path_train='/home/dblab/git/PyTorch-StudioGAN/data/imb_cifar10/train', batch_size=128)
 
-    model = Autoencoder(latent_dim=128, img_dim=3, num_class=10)
+    latent_dim = 128
+    img_dim = 3
+    num_class = 10
+    encoder = Encoder(img_dim=img_dim, latent_dim=latent_dim)
+    decoder = Decoder(img_dim=img_dim, latent_dim=latent_dim)
+    embedding = Embedding_labeled_latent(latent_dim=latent_dim, num_class=num_class)
+    model = Autoencoder(encoder, decoder, embedding)
+
+    '.'.join(k.split('.')[1:])
+    decoder_weight = {'.'.join(k.split('.')[1:]):v for k, v in model.state_dict().items() if 'decoder' in k}
+    decoder_weight.keys()
+    for i, _ in model.state_dict().items():
+        if 'decoder' in i:
+            print('.'.join(i.split('.')[1:]))
+
+    if 'encoder' in model.state_dict():
+        print('True')
 
     # model
 
-    wandb_logger = WandbLogger(project='MYGAN', name='BEGAN-AE_my-data')
+    wandb_logger = WandbLogger(project='MYGAN', name='BEGAN-AE_my-data_v2')
     trainer = pl.Trainer(
         default_root_dir='/shared_hdd/sin/save_files/EBGAN/',
         fast_dev_run=False,
-        max_epochs=30,
+        max_epochs=1,
         callbacks=[pl.callbacks.ModelCheckpoint(monitor="train_loss", mode='min')],
         logger=wandb_logger,
         strategy='ddp',
         accelerator='gpu',
-        gpus=1,
+        gpus=[4],
         # check_val_every_n_epoch=10
     )
     trainer.fit(model, datamodule=dm)
