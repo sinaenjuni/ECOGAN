@@ -1,9 +1,6 @@
 from metric.inception_net import EvalModel
 import torch
-from src.EBGAN.dataset import DataModule_
-import pytorch_lightning as pl
-
-
+from utils.dataset import DataModule_
 
 eval_model = EvalModel().to(torch.device('cuda:4'))
 

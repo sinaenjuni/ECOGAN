@@ -1,13 +1,10 @@
 import torch
-import torch.nn as nn
 import torch.nn.functional as F
 import pytorch_lightning as pl
 from torch.optim import Adam
-from src.EBGAN.dataset import DataModule_
-from torchvision.utils import make_grid
-import wandb
+from utils.dataset import DataModule_
 from pytorch_lightning.loggers import WandbLogger
-from src.EBGAN.models import Encoder, Decoder, Embedding_labeled_latent
+from models import Encoder, Decoder, Embedding_labeled_latent
 
 # wandb.login(key = '6afc6fd83ea84bf316238272eb71ef5a18efd445')
 # wandb.init(project='MYGAN', name='BEGAN-AE')

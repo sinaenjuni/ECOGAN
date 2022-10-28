@@ -103,7 +103,7 @@ class EvalModel(nn.Module):
 
 
 if __name__ == '__main__':
-    from src.EBGAN.dataset import DataModule_
+    from dataset import DataModule_
     dm = DataModule_(path_train='/home/dblab/sin/save_files/refer/ebgan_cifar10', batch_size=128)
     dm.setup('fit')
     dm.setup('val')

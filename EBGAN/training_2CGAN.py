@@ -1,23 +1,16 @@
 import torch
-import torch.nn as nn
 import torch.nn.functional as F
 import pytorch_lightning as pl
 from torch.optim import Adam
-from collections import OrderedDict
 
-from dataset import DataModule_
-from torchvision.utils import make_grid
-import wandb
+from utils.dataset import DataModule_
 from pytorch_lightning.loggers import WandbLogger
-from models import Encoder, Decoder, Embedding_labeled_latent
-from torchmetrics.image.fid import FrechetInceptionDistance
-from torchmetrics.image.inception import InceptionScore
 from metric.inception_net import EvalModel
 from metric.ins import calculate_kl_div
 from metric.fid import calculate_mu_sigma, frechet_inception_distance
 import numpy as np
 from models import Generator, Discriminator_EC
-from losses import ConditionalContrastiveLoss
+from utils.losses import ConditionalContrastiveLoss
 
 class GAN(pl.LightningModule):
     def __init__(self, latent_dim, img_dim, num_class, pre_train_path=None):

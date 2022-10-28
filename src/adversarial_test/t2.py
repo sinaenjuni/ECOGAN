@@ -1,18 +1,16 @@
 import torch
-import torch.nn as nn
 import torch.nn.functional as F
 from torch.utils.data import DataLoader
-from torchvision.datasets import MNIST, FashionMNIST, CIFAR10, ImageFolder
+from torchvision.datasets import ImageFolder
 from torchvision.transforms import Compose, ToTensor, Normalize, Resize
 # from src.adversarial_test.model import Encoder, Decoder
-from torch.nn.utils import spectral_norm
 from tqdm import tqdm
-from src.metric import fid, ins
+from src.metric import fid
 from src.metric.inception_net import EvalModel
 import numpy as np
 from torchvision.utils import make_grid
 import matplotlib.pyplot as plt
-from src.EBGAN.training_EBGAN import Generator, Discriminator
+from training_EBGAN import Generator, Discriminator
 
 img_dim = 3
 num_classes = 10

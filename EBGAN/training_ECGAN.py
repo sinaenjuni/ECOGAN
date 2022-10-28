@@ -1,23 +1,16 @@
 import torch
-import torch.nn as nn
 import torch.nn.functional as F
 import pytorch_lightning as pl
 from torch.optim import Adam
-from collections import OrderedDict
 
-from dataset import DataModule_
-from torchvision.utils import make_grid
-import wandb
+from utils.dataset import DataModule_
 from pytorch_lightning.loggers import WandbLogger
-from models import Encoder, Decoder, Embedding_labeled_latent
-from torchmetrics.image.fid import FrechetInceptionDistance
-from torchmetrics.image.inception import InceptionScore
 from metric.inception_net import EvalModel
 from metric.ins import calculate_kl_div
 from metric.fid import calculate_mu_sigma, frechet_inception_distance
 import numpy as np
-from models import Generator, Discriminator
-
+from models import Generator, Discriminator_EC
+from utils.losses import ExhustiveContrastiveLoss
 
 class GAN(pl.LightningModule):
     def __init__(self, latent_dim, img_dim, num_class, pre_train_path=None):
@@ -28,7 +21,7 @@ class GAN(pl.LightningModule):
 
         self.eval_model = EvalModel()
         self.G = Generator(img_dim=img_dim, latent_dim=latent_dim, num_class=num_class)
-        self.D = Discriminator(img_dim=img_dim, latent_dim=latent_dim, num_class=num_class)
+        self.D = Discriminator_EC(img_dim=img_dim, latent_dim=latent_dim, num_class=num_class, d_embed_dim=512)
 
         mu_sigma_train = np.load('/shared_hdd/sin/save_files/img_cifar10.npz')
         self.mu_original, self.sigma_original = mu_sigma_train['mu'][-1], mu_sigma_train['sigma'][-1]
@@ -40,6 +33,7 @@ class GAN(pl.LightningModule):
             self.G.load_state_dict(weights['state_dict'], strict=False)
             self.D.load_state_dict(weights['state_dict'], strict=False)
 
+        self.eco_loss = ExhustiveContrastiveLoss(num_classes=num_class, temperature=1.0)
 
     def forward(self, z, label):
         return self.G(z, label)
@@ -55,13 +49,14 @@ class GAN(pl.LightningModule):
             wrong_labels = (torch.rand((batch_size,)) * 10).to(torch.long).to(self.device)
 
             fake_imgs = self(z, real_labels).detach()
-            fake_logits = self.D(fake_imgs, fake_labels)
-            real_logits = self.D(real_imgs, real_labels)
-            wrong_logits = self.D(real_imgs, wrong_labels)
-            d_cost = self.d_loss(real_logits, fake_logits, wrong_logits)
+            fake_logits, _, _ = self.D(fake_imgs, fake_labels)
+            real_logits, embed_data, embed_label = self.D(real_imgs, real_labels)
 
+
+            d_adv_loss = self.d_loss(real_logits, fake_logits)
+            d_cond_loss = self.eco_loss(embed_data, embed_label, real_labels)
             gp = self.compute_gradient_penalty(real_imgs, fake_imgs, real_labels)
-            d_loss = d_cost + gp * 10.0
+            d_loss = d_adv_loss + gp * 10.0 + d_cond_loss
 
             self.log('d_loss', d_loss, prog_bar=True, logger=True, on_epoch=True)
             return d_loss
@@ -70,10 +65,12 @@ class GAN(pl.LightningModule):
             z = torch.randn(real_imgs.size(0), self.latent_dim).to(self.device)
             fake_labels = (torch.rand((batch_size,)) * 10).to(torch.long).to(self.device)
 
-            fake_imgs = self(z, fake_labels)
-            fake_logits = self.D(fake_imgs, fake_labels)
-            g_loss = self.g_loss(fake_logits)
+            gen_imgs = self(z, fake_labels)
+            gen_logits, gen_embed_data, gen_embed_label = self.D(gen_imgs, fake_labels)
+            g_adv_loss = self.g_loss(gen_logits)
+            g_cond_loss = self.eco_loss(gen_embed_data, gen_embed_label, fake_labels)
 
+            g_loss = g_adv_loss + g_cond_loss
             self.log('g_loss', g_loss, prog_bar=True, logger=True, on_epoch=True)
             return g_loss
 
@@ -143,14 +140,10 @@ class GAN(pl.LightningModule):
     def mes_loss(self, y_hat, y):
         return F.mse_loss(y_hat, y)
 
-
-    def d_loss(self, real_logits, fake_logits, wrong_logits):
+    def d_loss(self, real_logits, fake_logits):
         real_loss = F.binary_cross_entropy_with_logits(real_logits, torch.ones_like(real_logits))
         fake_loss = F.binary_cross_entropy_with_logits(fake_logits, torch.zeros_like(fake_logits))
-        wrong_loss = F.binary_cross_entropy_with_logits(wrong_logits, torch.zeros_like(wrong_logits))
-
-        return real_loss + fake_loss + wrong_loss
-
+        return real_loss + fake_loss
 
     def compute_gradient_penalty(self, real_samples, fake_samples, real_labels):
         # real_samples = real_samples.reshape(real_samples.size(0), 1, 28, 28).to(device)
@@ -165,7 +158,7 @@ class GAN(pl.LightningModule):
         diff = fake_samples - real_samples
         interpolates = (real_samples + alpha * diff).requires_grad_(True)
 
-        d_interpolates = self.D(interpolates, real_labels)
+        d_interpolates, _, _ = self.D(interpolates, real_labels)
 
         weights = torch.ones(d_interpolates.size()).to(self.device)
         # Get gradient w.r.t. interpolates
@@ -210,21 +203,20 @@ if __name__ == "__main__":
 
     # dm = DataModule_(path_train='/home/dblab/sin/save_files/refer/ebgan_cifar10', batch_size=128)
     dm = DataModule_(path_train='/home/dblab/git/PyTorch-StudioGAN/data/imb_cifar10/train', batch_size=128, num_workers=4)
-    model = GAN(latent_dim=128, img_dim=3, num_class=10,
-                pre_train_path='/shared_hdd/sin/save_files/EBGAN/MYGAN/EBGAN-AE_my-data/checkpoints/epoch=24-step=1875.ckpt')
+    model = GAN(latent_dim=128, img_dim=3, num_class=10)
 
     # model
 
     # wandb.login(key='6afc6fd83ea84bf316238272eb71ef5a18efd445')
     # wandb.init(project='MYGAN', name='BEGAN-GAN')
 
-    wandb_logger = WandbLogger(project='MYGAN', name='BEGAN-GAN_pre-trained')
+    wandb_logger = WandbLogger(project='MYGAN', name='ECOGAN')
     trainer = pl.Trainer(
         # fast_dev_run=True,
-        default_root_dir='/shared_hdd/sin/save_files/EBGAN/',
+        default_root_dir='/shared_hdd/sin/save_files/ECOGAN-512/',
         max_epochs=100,
         # callbacks=[EarlyStopping(monitor='val_loss')],
-        callbacks=[pl.callbacks.ModelCheckpoint(filename="EBGAN-{epoch:02d}-{fid}",
+        callbacks=[pl.callbacks.ModelCheckpoint(filename="ECOGAN-512-{epoch:02d}-{fid}",
                                                 monitor="fid", mode='min')],
         logger=wandb_logger,
         # logger=False,
