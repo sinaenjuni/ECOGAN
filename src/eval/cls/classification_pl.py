@@ -15,7 +15,7 @@ from pathlib import Path
 from PIL import Image
 from utils import MergeDataset
 
-
+import pytorch_lightning as pl
 
 ori_imb_data_path = "/home/dblab/git/PyTorch-StudioGAN/data/imb_cifar10/train"
 # paths = {"EBGAN_gened_data_path" : "/home/dblab/git/EBGAN/save_files/EBGAN_restore_data",
@@ -26,6 +26,56 @@ paths = {"EBGAN_gened_data_path" : "/shared_hdd/sin/save_files/gened_img/EBGAN",
          "BEGAN_pre-trained_gened_data_path" : "/shared_hdd/sin/save_files/gened_img/EBGAN_pre-trained",
          # "ECOGAN_gened_data_path" : "/shared_hdd/sin/save_files/gened_img/ECOGAN"
         }
+
+
+class Classification_Model(pl.LightningModule):
+    def __init__(self, num_classes, lr=0.01):
+        super(Classification_Model, self).__init__()
+        self.lr = lr
+        self.model = resnet18(num_classes=num_classes)
+        self.conf = ConfusionMatrix(num_classes=num_classes)
+
+    def forward(self, x):
+        return self.model(x)
+
+    def training_step(self, batch):
+        img, label = batch
+
+        logit = self(img)
+        loss = self.ce_loss(logit, label)
+
+        self.conf.update(preds=logit.argmax(1), target=label)
+
+        self.log('train_loss', loss, prog_bar=True, logger=True, on_step=True, on_epoch=True)
+        return {'loss': loss}
+
+    def training_epoch_end(self, outputs):
+        cm = self.conf.compute()
+        acc = cm.trace() / cm.sum()
+        acc_per_cls = cm.diagonal() / cm.sum(1)
+        self.log_dict({'train/acc': acc,
+                       'train/acc_per_cls': acc_per_cls},
+                      prog_bar=True, logger=True, on_step=True, on_epoch=True)
+
+    def ce_loss(self, logit, label):
+        return F.cross_entropy(logit, label)
+
+    def configure_optimizers(self):
+        return SGD(self.parameters(), lr=self.lr)
+
+
+    def validation_step(self, batch):
+        img, label = batch
+
+        logit = self(img)
+        loss = self.ce_loss(logit, label)
+
+        self.log('val/loss', loss,
+                 prog_bar=True, logger=True, on_step=True, on_epoch=True)
+
+
+    def validation_epoch_end(self, outputs):
+
 
 
 for data_name, data_path in paths.items():
