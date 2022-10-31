@@ -46,7 +46,7 @@ class Classification_Model(pl.LightningModule):
 
         self.conf.update(preds=logit.argmax(1), target=label)
 
-        self.log('train_loss', loss, prog_bar=True, logger=True, on_step=True, on_epoch=True)
+        self.log('train/loss', loss, prog_bar=True, logger=True, on_step=True, on_epoch=False)
         return {'loss': loss}
 
     def training_epoch_end(self, outputs):
@@ -55,27 +55,22 @@ class Classification_Model(pl.LightningModule):
         acc_per_cls = cm.diagonal() / cm.sum(1)
         self.log_dict({'train/acc': acc,
                        'train/acc_per_cls': acc_per_cls},
-                      prog_bar=True, logger=True, on_step=True, on_epoch=True)
+                      prog_bar=True, logger=True, on_step=True, on_epoch=False)
+
+    def validation_step(self, batch):
+        img, label = batch
+        logit = self(img)
+        loss = self.ce_loss(logit, label)
+        self.log('val/loss', loss,
+                 prog_bar=True, logger=True, on_step=True, on_epoch=False)
+
+    def validation_epoch_end(self, outputs):
 
     def ce_loss(self, logit, label):
         return F.cross_entropy(logit, label)
 
     def configure_optimizers(self):
         return SGD(self.parameters(), lr=self.lr)
-
-
-    def validation_step(self, batch):
-        img, label = batch
-
-        logit = self(img)
-        loss = self.ce_loss(logit, label)
-
-        self.log('val/loss', loss,
-                 prog_bar=True, logger=True, on_step=True, on_epoch=True)
-
-
-    def validation_epoch_end(self, outputs):
-
 
 
 for data_name, data_path in paths.items():
