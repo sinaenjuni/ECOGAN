@@ -35,7 +35,7 @@ class Decoder(nn.Module):
                 # nn.init.constant_(m.bias, 0)
 
 
-    def __init__(self, img_dim, latent_dim):
+    def __init__(self, img_dim, latent_dim, *args, **kargs):
         super(Decoder, self).__init__()
         self.dims = [256, 128, 128, 64, img_dim]
 
@@ -46,14 +46,17 @@ class Decoder(nn.Module):
                                                         kernel_size=4, stride=2, padding=1),
                                      nn.BatchNorm2d(self.dims[1]),
                                      nn.LeakyReLU(negative_slope=0.2, inplace=True))
+
         self.deconv1 = nn.Sequential(nn.ConvTranspose2d(in_channels=self.dims[1], out_channels=self.dims[2],
                                                         kernel_size=4, stride=2, padding=1),
                                      nn.BatchNorm2d(self.dims[2]),
                                      nn.LeakyReLU(negative_slope=0.2, inplace=True))
+
         self.deconv2 = nn.Sequential(nn.ConvTranspose2d(in_channels=self.dims[2], out_channels=self.dims[3],
                                                         kernel_size=4, stride=2, padding=1),
                                      nn.BatchNorm2d(self.dims[3]),
                                      nn.LeakyReLU(negative_slope=0.2, inplace=True))
+
         self.deconv3 = nn.ConvTranspose2d(in_channels=self.dims[3], out_channels=self.dims[4], kernel_size=4,
                                           stride=2, padding=1)
 
@@ -117,7 +120,7 @@ class Encoder(nn.Module):
                 nn.init.normal_(m.weight, std=0.02)
                 # nn.init.constant_(m.bias, 0)
 
-    def __init__(self, img_dim, latent_dim):
+    def __init__(self, img_dim, latent_dim, *argd, **kargs):
         super(Encoder, self).__init__()
         self.dims = [64, 128, 128, 256]
 
@@ -169,10 +172,10 @@ class Encoder(nn.Module):
         return x
 
 class Embedding_labeled_latent(nn.Module):
-    def __init__(self, latent_dim, num_class):
+    def __init__(self, latent_dim, num_classes, *args, **kargs):
         super(Embedding_labeled_latent, self).__init__()
 
-        self.embedding = nn.Sequential(nn.Embedding(num_embeddings=num_class, embedding_dim=latent_dim),
+        self.embedding = nn.Sequential(nn.Embedding(num_embeddings=num_classes, embedding_dim=latent_dim),
                                       nn.Flatten())
 
     def forward(self, z, label):

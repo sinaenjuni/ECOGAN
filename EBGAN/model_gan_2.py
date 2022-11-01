@@ -6,7 +6,7 @@ from torch.optim import Adam
 from utils.dataset import DataModule_
 import wandb
 from pytorch_lightning.loggers import WandbLogger
-from EBGAN.models import Generator, Discriminator
+from src.models import Generator, Discriminator
 from torchmetrics.image.fid import FrechetInceptionDistance
 
 

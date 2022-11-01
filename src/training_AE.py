@@ -5,13 +5,14 @@ from torch.optim import Adam
 from utils.dataset import DataModule_
 from pytorch_lightning.loggers import WandbLogger
 from models import Encoder, Decoder, Embedding_labeled_latent
-
+from argparse import ArgumentParser
+import wandb
 # wandb.login(key = '6afc6fd83ea84bf316238272eb71ef5a18efd445')
 # wandb.init(project='MYGAN', name='BEGAN-AE')
 
 
 class Autoencoder(pl.LightningModule):
-    def __init__(self, encoder, decoder, embedding):
+    def __init__(self, encoder, decoder, embedding, lr, betas, *args, **kwargs):
         super(Autoencoder, self).__init__()
         self.save_hyperparameters()
         # self.encoder = Encoder(img_dim=img_dim, latent_dim=latent_dim)
@@ -20,6 +21,8 @@ class Autoencoder(pl.LightningModule):
         self.encoder = encoder
         self.decoder = decoder
         self.embedding = embedding
+        self.lr = lr
+        self.betas = betas
 
     def forward(self, img, label):
         x = self.encoder(img)
@@ -33,8 +36,7 @@ class Autoencoder(pl.LightningModule):
         y_hat = self(img, label)
         loss = self.mes_loss(y_hat, img)
 
-        log_dict = {"train_loss": loss}
-        self.log_dict(log_dict, prog_bar=True, logger=True)
+        self.log('train/loss', loss, prog_bar=True, logger=True, on_step=False, on_epoch=True)
         return {'loss': loss, 'y_hat': y_hat}
 
     def training_epoch_end(self, outputs):
@@ -59,10 +61,22 @@ class Autoencoder(pl.LightningModule):
         # self.logger.experiment.add_image('imgs', grid)
 
     def configure_optimizers(self):
-        return Adam(self.parameters(), lr=0.0002, betas=(0.5, 0.9))
+        return Adam(self.parameters(), lr=self.lr, betas=self.betas)
 
     def mes_loss(self, y_hat, y):
         return F.mse_loss(y_hat, y)
+
+    def on_save_checkpoint(self, checkpoint):
+        checkpoint['encoder'] = encoder.state_dict()
+        checkpoint['decoder'] = decoder.state_dict()
+        checkpoint['embedding'] = embedding.state_dict()
+
+    @staticmethod
+    def add_model_specific_args(parent_parser):
+        parser = parent_parser.add_argument_group("AE")
+        parser.add_argument('--lr', type=float, default=0.0002)
+        parser.add_argument('--betas', type=tuple, default=(0.5, 0.9))
+        return parent_parser
 
 
 if __name__ == "__main__":
@@ -84,38 +98,47 @@ if __name__ == "__main__":
     # output = le(z, label)
 
     # dm = DataModule_(path_train='/home/dblab/sin/save_files/refer/ebgan_cifar10', batch_size=128)
-    dm = DataModule_(path_train='/home/dblab/git/PyTorch-StudioGAN/data/imb_cifar10/train', batch_size=128)
+    # dm = DataModule_(path_train='/home/dblab/git/PyTorch-StudioGAN/data/imb_cifar10/train', batch_size=128)
 
-    latent_dim = 128
-    img_dim = 3
-    num_class = 10
-    encoder = Encoder(img_dim=img_dim, latent_dim=latent_dim)
-    decoder = Decoder(img_dim=img_dim, latent_dim=latent_dim)
-    embedding = Embedding_labeled_latent(latent_dim=latent_dim, num_class=num_class)
-    model = Autoencoder(encoder, decoder, embedding)
+    parser = ArgumentParser()
+    parser.add_argument("--num_classes", type=int, default=10, required=False)
+    parser.add_argument("--img_dim", type=int, default=3, required=False)
+    parser.add_argument("--latent_dim", type=int, default=128, required=False)
+    parser.add_argument("--data_name", type=str, default='imb_CIFAR10',
+                        choices=['imb_CIFAR10', 'imb_MNIST', 'imb_FashionMNIST'], required=False)
+    parser = Autoencoder.add_model_specific_args(parser)
 
-    '.'.join(k.split('.')[1:])
-    decoder_weight = {'.'.join(k.split('.')[1:]):v for k, v in model.state_dict().items() if 'decoder' in k}
-    decoder_weight.keys()
-    for i, _ in model.state_dict().items():
-        if 'decoder' in i:
-            print('.'.join(i.split('.')[1:]))
+    args = parser.parse_args("")
+    dm = DataModule_.from_argparse_args(args)
 
-    if 'encoder' in model.state_dict():
-        print('True')
+    encoder = Encoder(**vars(args))
+    decoder = Decoder(**vars(args))
+    embedding = Embedding_labeled_latent(**vars(args))
+    model = Autoencoder(encoder, decoder, embedding, **vars(args))
+
+    # decoder_weight = {'.'.join(k.split('.')[1:]):v for k, v in model.state_dict().items() if 'decoder' in k}
+    # decoder_weight.keys()
+    # for i, _ in model.state_dict().items():
+    #     if 'decoder' in i:
+    #         print('.'.join(i.split('.')[1:]))
+    #
+    # if 'encoder' in model.state_dict():
+    #     print('True')
 
     # model
 
-    wandb_logger = WandbLogger(project='MYGAN', name='BEGAN-AE_my-data_v2')
+    wandb_logger = WandbLogger(project='MYGAN', name=f'BEGAN-AE-{args.data_name}', log_model=True)
+    wandb_logger.watch(model, log='all')
+    wandb.define_metric('train/loss', summary='min')
     trainer = pl.Trainer(
-        default_root_dir='/shared_hdd/sin/save_files/EBGAN/',
+        default_root_dir=f'/shared_hdd/sin/save_files/EBGAN/AE/{args.data_name}',
         fast_dev_run=False,
-        max_epochs=1,
-        callbacks=[pl.callbacks.ModelCheckpoint(monitor="train_loss", mode='min')],
+        max_epochs=30,
+        callbacks=[pl.callbacks.ModelCheckpoint(monitor="train/loss", mode='min')],
         logger=wandb_logger,
-        strategy='ddp',
+        strategy='ddp_find_unused_parameters_false',
         accelerator='gpu',
-        gpus=[4],
+        gpus=1,
         # check_val_every_n_epoch=10
     )
     trainer.fit(model, datamodule=dm)
@@ -125,3 +148,14 @@ if __name__ == "__main__":
     # label = torch.randint(0,10, (100, ))
     # ae =
     # output = ae(img, label)
+
+    # weight = torch.load("/shared_hdd/sin/save_files/EBGAN/MYGAN/308uyxwa/checkpoints/epoch=24-step=1875.ckpt")
+
+
+# import wandb
+# from pathlib import Path
+# run = wandb.init()
+# artifact = run.use_artifact('sinaenjuni/MYGAN/model-3vkiuonh:v0', type='model')
+# artifact_dir = artifact.download()
+#
+# torch.load(Path(artifact_dir) / "model.ckpt")
