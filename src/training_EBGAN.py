@@ -10,29 +10,39 @@ from metric.ins import calculate_kl_div
 from metric.fid import calculate_mu_sigma, frechet_inception_distance
 import numpy as np
 from models import Generator, Discriminator
-
+from torchmetrics.image.fid import FrechetInceptionDistance
+from torchmetrics.image.inception import InceptionScore
+from argparse import ArgumentParser
 
 class GAN(pl.LightningModule):
-    def __init__(self, latent_dim, img_dim, num_class, pre_train_path=None):
+    def __init__(self, latent_dim, img_dim, num_classes, lr, betas, *args, **kwargs):
         super(GAN, self).__init__()
+        self.save_hyperparameters()
 
+        self.lr = lr
+        self.betas = betas
+        self.img_dim = img_dim
         self.latent_dim = latent_dim
-        # self.fid = FrechetInceptionDistance()
+        self.fid = FrechetInceptionDistance(reset_real_features=False)
+        self.ins = InceptionScore()
+        # self.eval_model = EvalModel()
+        self.G = Generator(img_dim=img_dim, latent_dim=latent_dim, num_classes=num_classes)
+        self.D = Discriminator(img_dim=img_dim, latent_dim=latent_dim, num_classes=num_classes)
 
-        self.eval_model = EvalModel()
-        self.G = Generator(img_dim=img_dim, latent_dim=latent_dim, num_class=num_class)
-        self.D = Discriminator(img_dim=img_dim, latent_dim=latent_dim, num_class=num_class)
+        # mu_sigma_train = np.load('/shared_hdd/sin/save_files/img_cifar10.npz')
+        # self.mu_original, self.sigma_original = mu_sigma_train['mu'][-1], mu_sigma_train['sigma'][-1]
 
-        mu_sigma_train = np.load('/shared_hdd/sin/save_files/img_cifar10.npz')
-        self.mu_original, self.sigma_original = mu_sigma_train['mu'][-1], mu_sigma_train['sigma'][-1]
-
-        if pre_train_path is not None:
+        # if pre_train_path is not None:
             # path = '/home/dblab/git/VAE-GAN/src/EBGAN/GAN/1gqzkv1e/checkpoints/epoch=28-step=1508.ckpt'
-            weights = torch.load(pre_train_path)
+            # weights = torch.load(pre_train_path)
 
-            self.G.load_state_dict(weights['state_dict'], strict=False)
-            self.D.load_state_dict(weights['state_dict'], strict=False)
+            # self.G.load_state_dict(weights['state_dict'], strict=False)
+            # self.D.load_state_dict(weights['state_dict'], strict=False)
 
+    def on_load_checkpoint(self, checkpoint):
+        self.G.load_state_dict(checkpoint['decoder'])
+        self.G.load_state_dict(checkpoint['embedding'])
+        self.D.load_state_dict(checkpoint['encoder'])
 
     def forward(self, z, label):
         return self.G(z, label)
@@ -40,6 +50,11 @@ class GAN(pl.LightningModule):
     def training_step(self, batch, batch_idx, optimizer_idx):
         real_imgs, real_labels = batch
         batch_size = real_imgs.size(0)
+        if self.global_step == 0:
+            fid_real_img = ((0.5*real_imgs+0.5)*255.).to(torch.uint8)
+            if self.img_dim == 1:
+                fid_real_img = fid_real_img.repeat(1,3,1,1)
+            self.fid.update(fid_real_img, real=True)
 
 
         if optimizer_idx == 0:
@@ -56,7 +71,7 @@ class GAN(pl.LightningModule):
             gp = self.compute_gradient_penalty(real_imgs, fake_imgs, real_labels)
             d_loss = d_cost + gp * 10.0
 
-            self.log('d_loss', d_loss, prog_bar=True, logger=True, on_epoch=True)
+            self.log('d_loss', d_loss, prog_bar=True, logger=True, on_epoch=True, on_step=False)
             return d_loss
 
         if optimizer_idx == 1:
@@ -67,7 +82,7 @@ class GAN(pl.LightningModule):
             fake_logits = self.D(fake_imgs, fake_labels)
             g_loss = self.g_loss(fake_logits)
 
-            self.log('g_loss', g_loss, prog_bar=True, logger=True, on_epoch=True)
+            self.log('g_loss', g_loss, prog_bar=True, logger=True, on_epoch=True, on_step=False)
             return g_loss
 
 
@@ -79,6 +94,7 @@ class GAN(pl.LightningModule):
 
     def validation_step(self, batch, batch_idx):
         imgs, labels = batch
+
         # z = torch.randn((imgs.size(0), self.latent_dim)).to(self.device)
         # label = torch.arange(0, 9, dtype=torch.long).repeat(100).to(self.device)
         # gend_imgs = self(z, labels)
@@ -93,28 +109,38 @@ class GAN(pl.LightningModule):
             # z = torch.randn(label.size(0), latent_dim).cuda()
             z = torch.randn((imgs.size(0), self.latent_dim)).to(self.device)
             img_fake = self(z, labels)
-
-            embeddings, logits = self.eval_model(img_fake, quantize=True)
-            ps = torch.nn.functional.softmax(logits, dim=1)
+            img_fake = ((0.5*img_fake+0.5)*255.).to(torch.uint8)
+            if self.img_dim == 1:
+                img_fake = img_fake.repeat(1,3,1,1)
+            self.fid.update(img_fake, real=False)
+            self.ins.update(img_fake)
+            # embeddings, logits = self.eval_model(img_fake, quantize=True)
+            # ps = torch.nn.functional.softmax(logits, dim=1)
             # ps_list.append(ps)
             # em_list.append(embeddings)
 
-        return {'ps': ps, 'embedding': embeddings}
+        # return {'ps': ps, 'embedding': embeddings}
 
     def validation_epoch_end(self, outputs):
         # print(outputs)
-        ps = torch.cat([output['ps'] for output in outputs])
-        embedding = torch.cat([output['embedding'] for output in outputs])
+        # ps = torch.cat([output['ps'] for output in outputs])
+        # embedding = torch.cat([output['embedding'] for output in outputs])
         # print(ps.size())
         # print(embedding.size())
 
-        ins_score, ins_std = calculate_kl_div(ps, 10)
-        mu_target, sigma_target = calculate_mu_sigma(embedding.cpu().numpy())
-        fid_score = frechet_inception_distance(self.mu_original, self.sigma_original, mu_target, sigma_target)
+        # ins_score, ins_std = calculate_kl_div(ps, 10)
+        # mu_target, sigma_target = calculate_mu_sigma(embedding.cpu().numpy())
+        # fid_score = frechet_inception_distance(self.mu_original, self.sigma_original, mu_target, sigma_target)
+
+
+        ins_score = self.ins.compute()[0]
+        fid_score = self.fid.compute()
+
 
         # print('ins_score', ins_score)
         # print('fid_score', fid_score)
-        self.log_dict({'fid': fid_score, 'ins_score': ins_score}, logger=True, prog_bar=True, on_epoch=True)
+        self.log_dict({'fid': fid_score, 'ins_score': ins_score},
+                      logger=True, prog_bar=True, on_epoch=True, on_step=False)
         # print('valid_fid_epoch', self.fid.compute())
         # self.log('fid', self.fid.compute(), logger=True, prog_bar=True, on_epoch=True)
         # self.fid.reset()
@@ -126,8 +152,8 @@ class GAN(pl.LightningModule):
 
 
     def configure_optimizers(self):
-        optimizer_g = Adam(self.G.parameters(), lr=0.0002, betas=(0.5, 0.9))
-        optimizer_d = Adam(self.D.parameters(), lr=0.0002, betas=(0.5, 0.9))
+        optimizer_g = Adam(self.G.parameters(), lr=self.lr, betas=self.betas)
+        optimizer_d = Adam(self.D.parameters(), lr=self.lr, betas=self.betas)
 
         return [{'optimizer': optimizer_d, 'frequency': 5},
                 {'optimizer': optimizer_g, 'frequency': 1}]
@@ -201,21 +227,33 @@ if __name__ == "__main__":
     # le = Embedding_labeled_latent(128, 10)
     # output = le(z, label)
 
+    parser = ArgumentParser()
+    parser.add_argument("--num_classes", type=int, default=10, required=False)
+    parser.add_argument("--lr", type=float, default=0.0002, required=False)
+    parser.add_argument("--betas", type=tuple, default=(0.5, 0.9), required=False)
+    parser.add_argument("--img_dim", type=int, default=1, required=False)
+    parser.add_argument("--latent_dim", type=int, default=128, required=False)
+    parser.add_argument("--batch_size", type=int, default=128, required=False)
+    parser.add_argument("--data_name", type=str, default='imb_MNIST',
+                        choices=['imb_CIFAR10', 'imb_MNIST', 'imb_FashionMNIST'], required=False)
+    args = parser.parse_args()
+    dm = DataModule_.from_argparse_args(args)
+    model = GAN(**vars(args))
+
     # dm = DataModule_(path_train='/home/dblab/sin/save_files/refer/ebgan_cifar10', batch_size=128)
-    dm = DataModule_(path_train='/home/dblab/git/PyTorch-StudioGAN/data/imb_cifar10/train', batch_size=128, num_workers=4)
-    model = GAN(latent_dim=128, img_dim=3, num_class=10,
-                pre_train_path='/shared_hdd/sin/save_files/EBGAN/MYGAN/EBGAN-AE_my-data/checkpoints/epoch=24-step=1875.ckpt')
+    # dm = DataModule_(path_train='/home/dblab/git/PyTorch-StudioGAN/data/imb_cifar10/train', batch_size=128, num_workers=4)
+    # model = GAN(latent_dim=128, img_dim=3, num_class=10)
 
     # model
 
     # wandb.login(key='6afc6fd83ea84bf316238272eb71ef5a18efd445')
     # wandb.init(project='MYGAN', name='BEGAN-GAN')
 
-    wandb_logger = WandbLogger(project='MYGAN', name='BEGAN-GAN_pre-trained')
+    wandb_logger = WandbLogger(project='EBGAN', name='BEGAN-GAN_pre-trained', log_model=True)
     trainer = pl.Trainer(
-        # fast_dev_run=True,
+        fast_dev_run=100,
         default_root_dir='/shared_hdd/sin/save_files/EBGAN/',
-        max_epochs=100,
+        max_epochs=10,
         # callbacks=[EarlyStopping(monitor='val_loss')],
         callbacks=[pl.callbacks.ModelCheckpoint(filename="EBGAN-{epoch:02d}-{fid}",
                                                 monitor="fid", mode='min')],
@@ -223,7 +261,7 @@ if __name__ == "__main__":
         # logger=False,
         strategy='ddp',
         accelerator='gpu',
-        gpus=[4,5,6],
+        gpus=1,
         check_val_every_n_epoch=1,
         num_sanity_val_steps=0
     )

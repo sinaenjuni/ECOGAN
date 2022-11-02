@@ -184,10 +184,10 @@ class Embedding_labeled_latent(nn.Module):
 
 
 class Generator(nn.Module):
-    def __init__(self, img_dim, latent_dim, num_class):
+    def __init__(self, img_dim, latent_dim, num_classes):
         super(Generator, self).__init__()
 
-        self.embedding = Embedding_labeled_latent(latent_dim=latent_dim, num_class=num_class)
+        self.embedding = Embedding_labeled_latent(latent_dim=latent_dim, num_classes=num_classes)
         self.decoder = Decoder(img_dim=img_dim, latent_dim=latent_dim)
 
 
@@ -198,12 +198,12 @@ class Generator(nn.Module):
         return gened_img
 
 class Discriminator(nn.Module):
-    def __init__(self, img_dim, latent_dim, num_class):
+    def __init__(self, img_dim, latent_dim, num_classes):
         super(Discriminator, self).__init__()
 
         self.encoder = Encoder(img_dim, latent_dim)
 
-        self.embedding = nn.Sequential(nn.Embedding(num_embeddings=num_class, embedding_dim=512),
+        self.embedding = nn.Sequential(nn.Embedding(num_embeddings=num_classes, embedding_dim=512),
                                        nn.Flatten(),
                                        nn.Linear(512, 256 * (4 * 4)),
                                        nn.LeakyReLU(negative_slope=0.2, inplace=True))
@@ -222,15 +222,15 @@ class Discriminator(nn.Module):
         return out
 
 class Discriminator_EC(nn.Module):
-    def __init__(self, img_dim, latent_dim, num_class, d_embed_dim):
+    def __init__(self, img_dim, latent_dim, num_classes, d_embed_dim):
         super(Discriminator_EC, self).__init__()
 
         self.encoder = Encoder(img_dim, latent_dim)
         self.linear1 = nn.Linear(in_features=self.encoder.dims[3], out_features=1, bias=True)
         self.linear2 = nn.Linear(in_features=self.encoder.dims[3], out_features=d_embed_dim, bias=True)
-        self.embedding = nn.Embedding(num_embeddings=num_class, embedding_dim=d_embed_dim)
+        self.embedding = nn.Embedding(num_embeddings=num_classes, embedding_dim=d_embed_dim)
 
-        # self.embedding = nn.Sequential(nn.Embedding(num_embeddings=num_class, embedding_dim=512),
+        # self.embedding = nn.Sequential(nn.Embedding(num_embeddings=num_classes, embedding_dim=512),
         #                                nn.Flatten(),
         #                                nn.Linear(512, 256 * (4 * 4)),
         #                                nn.LeakyReLU(negative_slope=0.2, inplace=True))
