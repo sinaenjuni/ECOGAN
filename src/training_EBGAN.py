@@ -141,6 +141,8 @@ class GAN(pl.LightningModule):
         # print('fid_score', fid_score)
         self.log_dict({'fid': fid_score, 'ins_score': ins_score},
                       logger=True, prog_bar=True, on_epoch=True, on_step=False)
+        self.ins.reset()
+        self.fid.reset()
         # print('valid_fid_epoch', self.fid.compute())
         # self.log('fid', self.fid.compute(), logger=True, prog_bar=True, on_epoch=True)
         # self.fid.reset()
@@ -249,11 +251,11 @@ if __name__ == "__main__":
     # wandb.login(key='6afc6fd83ea84bf316238272eb71ef5a18efd445')
     # wandb.init(project='MYGAN', name='BEGAN-GAN')
 
-    wandb_logger = WandbLogger(project='EBGAN', name='BEGAN-GAN_pre-trained', log_model=True)
+    wandb_logger = WandbLogger(project='EBGAN', name='BEGAN-GAN', log_model=True)
     trainer = pl.Trainer(
-        fast_dev_run=100,
+        fast_dev_run=False,
         default_root_dir='/shared_hdd/sin/save_files/EBGAN/',
-        max_epochs=10,
+        max_epochs=100,
         # callbacks=[EarlyStopping(monitor='val_loss')],
         callbacks=[pl.callbacks.ModelCheckpoint(filename="EBGAN-{epoch:02d}-{fid}",
                                                 monitor="fid", mode='min')],
@@ -261,7 +263,7 @@ if __name__ == "__main__":
         # logger=False,
         strategy='ddp',
         accelerator='gpu',
-        gpus=1,
+        gpus=[0],
         check_val_every_n_epoch=1,
         num_sanity_val_steps=0
     )
