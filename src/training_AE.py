@@ -7,6 +7,8 @@ from pytorch_lightning.loggers import WandbLogger
 from models import Encoder, Decoder, Embedding_labeled_latent
 from argparse import ArgumentParser
 import wandb
+from torchvision.utils import make_grid
+from torchvision.transforms.functional import to_pil_image
 # wandb.login(key = '6afc6fd83ea84bf316238272eb71ef5a18efd445')
 # wandb.init(project='MYGAN', name='BEGAN-AE')
 
@@ -32,19 +34,27 @@ class Autoencoder(pl.LightningModule):
 
     def training_step(self, batch):
         img, label = batch
-
         y_hat = self(img, label)
         loss = self.mes_loss(y_hat, img)
 
         self.log('train/loss', loss, prog_bar=True, logger=True, on_step=False, on_epoch=True)
-        return {'loss': loss, 'y_hat': y_hat}
+        return {'loss': loss, 'y_hat': y_hat, 'label': label}
 
     def training_epoch_end(self, outputs):
-        y_hat = torch.cat([out['y_hat'] for out in outputs])
-        sample_imgs = [y_hat[-40:]]
+        y_hat = torch.cat([output['y_hat'] for output in outputs])
+        label = torch.cat([output['label'] for output in outputs])
+        idx = torch.cat([torch.where(label == cls_)[0][:10] for cls_ in torch.unique(label)])
+
+        # sample_imgs = [to_pil_image(0.5*img+0.5) for img in y_hat[idx]]
+        sample_imgs = y_hat[idx]
+        sample_cls = label[idx]
+        # print(sample_imgs.size())
+        grid = make_grid(sample_imgs, nrow=10, normalize=True)
+        grid = to_pil_image(grid)
+        # print(grid.shape)
+        wandb_logger.log_image(key="img", images=[grid], step=self.trainer.current_epoch)
         # grid = make_grid(sample_imgs).permute(1,2,0)
-        self.logger.log_image("img", sample_imgs, self.trainer.current_epoch)
-        # wandb_logger.log_image("img", sample_imgs, self.trainer.current_epoch)
+        # self.logger.log_image("img", sample_imgs, self.trainer.current_epoch)
         # for out in outputs:
         #     print(out['y_hat'].shape)
         # y_hat = outputs[0]['y_hat']
@@ -102,15 +112,14 @@ if __name__ == "__main__":
 
     parser = ArgumentParser()
     parser.add_argument("--num_classes", type=int, default=10, required=False)
-    parser.add_argument("--img_dim", type=int, default=3, required=False)
+    parser.add_argument("--img_dim", type=int, default=1, required=False)
     parser.add_argument("--latent_dim", type=int, default=128, required=False)
-    parser.add_argument("--data_name", type=str, default='imb_CIFAR10',
+    parser.add_argument("--data_name", type=str, default='imb_MNIST',
                         choices=['imb_CIFAR10', 'imb_MNIST', 'imb_FashionMNIST'], required=False)
     parser = Autoencoder.add_model_specific_args(parser)
 
-    args = parser.parse_args("")
+    args = parser.parse_args()
     dm = DataModule_.from_argparse_args(args)
-
     encoder = Encoder(**vars(args))
     decoder = Decoder(**vars(args))
     embedding = Embedding_labeled_latent(**vars(args))
@@ -127,7 +136,7 @@ if __name__ == "__main__":
 
     # model
 
-    wandb_logger = WandbLogger(project='MYGAN', name=f'BEGAN-AE-{args.data_name}', log_model=True)
+    wandb_logger = WandbLogger(project='EBGAN-AE', name=f'{args.data_name}', log_model=True)
     wandb_logger.watch(model, log='all')
     wandb.define_metric('train/loss', summary='min')
     trainer = pl.Trainer(
@@ -136,6 +145,7 @@ if __name__ == "__main__":
         max_epochs=30,
         callbacks=[pl.callbacks.ModelCheckpoint(monitor="train/loss", mode='min')],
         logger=wandb_logger,
+        # logger=False,
         strategy='ddp_find_unused_parameters_false',
         accelerator='gpu',
         gpus=1,
@@ -150,6 +160,14 @@ if __name__ == "__main__":
     # output = ae(img, label)
 
     # weight = torch.load("/shared_hdd/sin/save_files/EBGAN/MYGAN/308uyxwa/checkpoints/epoch=24-step=1875.ckpt")
+
+# weight['state_dict'][]
+# decoder_weight = {'.'.join(k.split('.')[1:]):v for k, v in weight['state_dict'].items() if 'decoder' in k}
+
+
+# for (k1, v1), (k2, v2) in zip(weight['decoder'].items(), decoder_weight.items()):
+#     print(torch.any(v1 == v2))
+
 
 
 # import wandb

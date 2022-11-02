@@ -38,16 +38,16 @@ class Classification_Model(pl.LightningModule):
         self.save_hyperparameters()
 
         self.lr = lr
-        self.model = resnet18(num_classes=num_classes)
-        self.model.conv1.in_channels = img_dim
+        self.model = resnet18(pretrained=False, num_classes=num_classes)
+        self.model.conv1 = nn.Conv2d(img_dim, 64, kernel_size=7, stride=2, padding=3, bias=False)
         self.conf = ConfusionMatrix(num_classes=num_classes)
+        self.best_acc = 0
 
     def forward(self, x):
         return self.model(x)
 
     def training_step(self, batch):
         img, label = batch
-
         logit = self(img)
         loss = self.ce_loss(logit, label)
 
@@ -76,14 +76,26 @@ class Classification_Model(pl.LightningModule):
         loss = self.ce_loss(logit, label)
 
         self.conf.update(preds=logit.argmax(1), target=label)
+        self.log('val/loss', loss, prog_bar=True, logger=True, on_step=False, on_epoch=True)
+        return {'loss': loss, 'logit':logit}
+
+    def validation_epoch_end(self, outputs):
+        loss = torch.stack([output['loss'] for output in outputs])
+        logit = torch.cat([output['logit'] for output in outputs])
+
         cm = self.conf.compute()
         acc = cm.trace() / cm.sum()
         acc_per_cls = cm.diagonal() / cm.sum(1)
 
         log_dict = {'val/acc': acc}
-        log_dict.update({f'val/acc_cls{idx}':acc_ for idx, acc_ in enumerate(acc_per_cls)})
+        log_dict.update({f'val/acc_cls{idx}': acc_ for idx, acc_ in enumerate(acc_per_cls)})
         self.log_dict(log_dict, prog_bar=False, logger=True, on_step=False, on_epoch=True)
-        self.log('val/loss', loss, prog_bar=True, logger=True, on_step=False, on_epoch=True)
+        if self.best_acc < acc:
+            self.best_acc = acc
+            wandb.run.summary['best/epoch'] = self.current_epoch + 1
+            wandb.run.summary['best/acc'] = acc
+            for idx, acc_ in enumerate(acc_per_cls):
+                wandb.run.summary[f'best/acc_cls{idx}'] = acc_
 
 
     def ce_loss(self, logit, label):
@@ -112,34 +124,32 @@ class Classification_Model(pl.LightningModule):
 parser = ArgumentParser()
 parser.add_argument("--num_classes", type=int, default=10, required=False)
 parser.add_argument("--lr", type=float, default=0.01, required=False)
-parser.add_argument("--img_dim", type=int, default=3, required=False)
+parser.add_argument("--img_dim", type=int, default=3, required=True)
 parser.add_argument("--data_name", type=str, default='imb_CIFAR10',
-                    choices=['imb_CIFAR10', 'imb_MNIST', 'imb_FashionMNIST'], required=False)
+                    choices=['imb_CIFAR10', 'imb_MNIST', 'imb_FashionMNIST'], required=True)
 
 
 args = parser.parse_args()
 dm = DataModule_.from_argparse_args(args)
-model = Classification_Model(**vars(args))
 
-wandb_logger = WandbLogger(project="cls_test", name=f"{args.data_name}")
-wandb.define_metric('val/acc', summary='max')
+model = Classification_Model(**vars(args))
+wandb_logger = WandbLogger(project="eval_cls", name=f"{args.data_name}", log_model=True)
+# wandb.define_metric('val/acc', summary='max')
+wandb_logger.watch(model, log='all')
 
 trainer = pl.Trainer.from_argparse_args(args,
     default_root_dir='/shared_hdd/sin/save_files/cls_tset/',
     fast_dev_run=False,
     max_epochs=100,
-    # callbacks=[pl.callbacks.ModelCheckpoint(monitor="train_loss", mode='min')],
+    # callbacks=[pl.callbacks.ModelCheckpoint(monitor="val/acc", mode='max')],
     logger=wandb_logger,
-    strategy='ddp',
+    # strategy='ddp',
+    strategy='ddp_find_unused_parameters_false',
     accelerator='gpu',
     gpus=1,
+    # num_sanity_val_steps=0
 )
 trainer.fit(model, datamodule=dm)
-
-
-
-
-
 
 
 

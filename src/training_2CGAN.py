@@ -11,6 +11,8 @@ from metric.fid import calculate_mu_sigma, frechet_inception_distance
 import numpy as np
 from models import Generator, Discriminator_EC
 from utils.losses import ConditionalContrastiveLoss
+from torchmetrics.image.fid import FeatureExtractorInceptionV3
+from torchmetrics.image.inception import InceptionScore
 
 class GAN(pl.LightningModule):
     def __init__(self, latent_dim, img_dim, num_class, pre_train_path=None):

@@ -14,10 +14,10 @@ def save_imgs(base_path, imgs, labels):
 
 
 base_path = Path("/shared_hdd/sin/save_files/imb_FashionMNIST/")
-# data_train = MNIST('/shared_hdd/sin/dataset/', download=False, train=True)
-# data_test = MNIST('/shared_hdd/sin/dataset/', download=False, train=False)
-data_train = FashionMNIST('/shared_hdd/sin/dataset/', download=False, train=True)
-data_test = FashionMNIST('/shared_hdd/sin/dataset/', download=False, train=False)
+data_train = MNIST('/shared_hdd/sin/dataset/', download=False, train=True)
+data_test = MNIST('/shared_hdd/sin/dataset/', download=False, train=False)
+# data_train = FashionMNIST('/shared_hdd/sin/dataset/', download=False, train=True)
+# data_test = FashionMNIST('/shared_hdd/sin/dataset/', download=False, train=False)
 classes, counts = torch.unique(data_train.targets, return_counts=True)
 
 imgs = data_train.data
@@ -26,6 +26,9 @@ labels = data_train.targets
 for c in range(1, 10, 1):
     imgs = torch.cat([imgs[labels != c], imgs[labels == c][:100 * c]])
     labels = torch.cat([labels[labels != c], labels[labels == c][:100 * c]])
+
+
+img = Image.fromarray(imgs[0].numpy())
 
 save_imgs(base_path/'train', imgs, labels)
 

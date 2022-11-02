@@ -1,7 +1,7 @@
 import pytorch_lightning as pl
 from torch.utils.data import DataLoader
 from torchvision.datasets import ImageFolder
-from torchvision.transforms import Compose, PILToTensor, Normalize, ToTensor, Resize
+from torchvision.transforms import Compose, PILToTensor, Normalize, ToTensor, Resize, Grayscale, Lambda
 from torch.utils.data import Dataset
 
 from pathlib import Path
@@ -9,7 +9,7 @@ from PIL import Image
 
 
 class DataModule_(pl.LightningDataModule):
-    def __init__(self, data_name, batch_size=128, num_workers=4, pin_memory=True):
+    def __init__(self, data_name, img_dim, batch_size=128, num_workers=4, pin_memory=True):
         super(DataModule_, self).__init__()
         self.batch_size = batch_size
 
@@ -20,21 +20,22 @@ class DataModule_(pl.LightningDataModule):
                       'imb_MNIST': '/home/shared_hdd/shared_hdd/sin/save_files/imb_MNIST/val',
                       'imb_FashionMNIST': '/home/shared_hdd/shared_hdd/sin/save_files/imb_FashionMNIST/val'}
 
-        self.path_train = paths_train[data_name]
-        self.path_test = paths_test[data_name]
+        self.img_dim = img_dim
+        self.data_name = data_name
+        self.path_train = paths_train[self.data_name]
+        self.path_test = paths_test[self.data_name]
         self.transforms = Compose([ToTensor(),
+                                   Grayscale() if self.img_dim == 1 else Lambda(lambda x: x),
                                    Resize(64),
-                                   Normalize(mean=(0.5, 0.5, 0.5),
-                                             std=(0.5, 0.5, 0.5))])
+                                   Normalize(mean=[0.5] * self.img_dim,
+                                             std=[0.5] * self.img_dim)
+                                    ])
         self.num_workers = num_workers
         self.pin_memory = pin_memory
 
     def setup(self, stage):
         self.dataset_train = ImageFolder(self.path_train, transform=self.transforms)
-        if self.path_test is None:
-            self.dataset_test = ImageFolder(self.path_train, transform=self.transforms)
-        else:
-            self.dataset_test = ImageFolder(self.path_test, transform=self.transforms)
+        self.dataset_test = ImageFolder(self.path_test, transform=self.transforms)
 
     def train_dataloader(self):
         return DataLoader(self.dataset_train,
@@ -83,7 +84,8 @@ class MergeDataset(Dataset):
         return img, label
 
 if __name__ == "__main__":
-    dm = DataModule_(data_name='imb_CIFAR10')
+    dm = DataModule_(data_name='imb_CIFAR10', img_dim=3)
+    dm = DataModule_(data_name='imb_MNIST', img_dim=1)
     dm.setup('fit')
     dm.setup('val')
 
