@@ -247,6 +247,7 @@ if __name__ == "__main__":
     parser.add_argument("--img_dim", type=int, default=1, required=False)
     parser.add_argument("--latent_dim", type=int, default=128, required=False)
     parser.add_argument("--batch_size", type=int, default=128, required=False)
+    parser.add_argument("--gpus", nargs='+', type=int, default=7, required=False)
     parser.add_argument("--data_name", type=str, default='imb_FashionMNIST',
                         choices=['imb_CIFAR10', 'imb_MNIST', 'imb_FashionMNIST'], required=False)
 
@@ -254,14 +255,14 @@ if __name__ == "__main__":
     dm = DataModule_.from_argparse_args(args)
     model = GAN(**vars(args))
 
-    run = wandb.init()
-    artifact = run.use_artifact(f'sinaenjuni/EBGAN-AE/{args.data_name}:v0', type='model')
+    api = wandb.Api()
+    artifact = api.artifact(name=f'sinaenjuni/EBGAN-AE/{args.data_name}:v0', type='model')
+    # artifact = api.artifact(name=f'sinaenjuni/EBGAN-AE/imb_CIFAR10:v0', type='model')
     artifact_dir = artifact.download()
     ch = torch.load(Path(artifact_dir) / "model.ckpt")
     model.on_load_checkpoint(ch)
-    wandb.finish()
 
-    # dm = DataModule_(path_train='/home/dblab/sin/save_files/refer/ebgan_cifar10', batch_size=128)
+    # dm = DataModule_(path_train='ß/home/dblab/sin/save_files/refer/ebgan_cifar10', batch_size=128)
     # dm = DataModule_(path_train='/home/dblab/git/PyTorch-StudioGAN/data/imb_cifar10/train', batch_size=128, num_workers=4)
     # model = GAN(latent_dim=128, img_dim=3, num_class=10)
 
@@ -272,7 +273,7 @@ if __name__ == "__main__":
 
     wandb_logger = WandbLogger(project='MYTEST', name=f'BEGAN-GAN_pre-trained({args.data_name})', log_model=True)
     wandb.define_metric('fid', summary='min')
-    trainer = pl.Trainer(
+    trainer = pl.Trainer.from_argparse_args(args,
         fast_dev_run=False,
         default_root_dir='/shared_hdd/sin/save_files/EBGAN/',
         max_epochs=100,
@@ -283,7 +284,7 @@ if __name__ == "__main__":
         # logger=False,
         strategy='ddp',
         accelerator='gpu',
-        gpus=[5],
+        # gpus=[5],
         check_val_every_n_epoch=1,
         num_sanity_val_steps=0
     )
