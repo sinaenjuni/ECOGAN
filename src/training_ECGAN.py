@@ -18,18 +18,19 @@ from pathlib import Path
 class GAN(pl.LightningModule):
     def __init__(self, latent_dim, img_dim, num_classes, lr, betas, *args, **kwargs):
         super(GAN, self).__init__()
+        self.save_hyperparameters()
 
+        self.lr = lr
+        self.betas = betas
+        self.img_dim = img_dim
         self.latent_dim = latent_dim
-        # self.fid = FrechetInceptionDistance()
-
         # self.eval_model = EvalModel()
         self.img_metric = Fid_and_is()
-
         self.G = Generator(img_dim=img_dim, latent_dim=latent_dim, num_classes=num_classes)
         self.D = Discriminator_EC(img_dim=img_dim, latent_dim=latent_dim, num_classes=num_classes, d_embed_dim=512)
 
-        mu_sigma_train = np.load('/shared_hdd/sin/save_files/img_cifar10.npz')
-        self.mu_original, self.sigma_original = mu_sigma_train['mu'][-1], mu_sigma_train['sigma'][-1]
+        # mu_sigma_train = np.load('/shared_hdd/sin/save_files/img_cifar10.npz')
+        # self.mu_original, self.sigma_original = mu_sigma_train['mu'][-1], mu_sigma_train['sigma'][-1]
 
 
         self.eco_loss = ExhustiveContrastiveLoss(num_classes=num_classes, temperature=1.0)
@@ -140,12 +141,11 @@ class GAN(pl.LightningModule):
 
 
     def configure_optimizers(self):
-        optimizer_g = Adam(self.G.parameters(), lr=0.0002, betas=(0.5, 0.9))
-        optimizer_d = Adam(self.D.parameters(), lr=0.0002, betas=(0.5, 0.9))
+        optimizer_g = Adam(self.G.parameters(), lr=self.lr, betas=self.betas)
+        optimizer_d = Adam(self.D.parameters(), lr=self.lr, betas=self.betas)
 
         return [{'optimizer': optimizer_d, 'frequency': 5},
                 {'optimizer': optimizer_g, 'frequency': 1}]
-
 
     def mes_loss(self, y_hat, y):
         return F.mse_loss(y_hat, y)
@@ -230,12 +230,12 @@ if __name__ == "__main__":
     dm = DataModule_.from_argparse_args(args)
     model = GAN(**vars(args))
 
-    api = wandb.Api()
-    artifact = api.artifact(name=f'sinaenjuni/EBGAN-AE/{args.data_name}:v0', type='model')
+    # api = wandb.Api()
+    # artifact = api.artifact(name=f'sinaenjuni/EBGAN-AE/{args.data_name}:v0', type='model')
     # artifact = api.artifact(name=f'sinaenjuni/EBGAN-AE/imb_CIFAR10:v0', type='model')
-    artifact_dir = artifact.download()
-    ch = torch.load(Path(artifact_dir) / "model.ckpt")
-    model.on_load_checkpoint(ch)
+    # artifact_dir = artifact.download()
+    # ch = torch.load(Path(artifact_dir) / "model.ckpt")
+    # model.on_load_checkpoint(ch)
 
 
     # model
@@ -243,14 +243,14 @@ if __name__ == "__main__":
     # wandb.login(key='6afc6fd83ea84bf316238272eb71ef5a18efd445')
     # wandb.init(project='MYGAN', name='BEGAN-GAN')
 
-    wandb_logger = WandbLogger(project='MYTEST', name=f'ECOGAN({args.data_name})', log_model=True)
+    wandb_logger = WandbLogger(project='MYTEST', name=f'ECGAN({args.data_name})', log_model=True)
     wandb.define_metric('fid', summary='min')
     trainer = pl.Trainer.from_argparse_args(args,
         fast_dev_run=False,
-        default_root_dir='/shared_hdd/sin/save_files/EBGAN/',
+        default_root_dir='/shared_hdd/sin/save_files/ECGAN/',
         max_epochs=100,
         # callbacks=[EarlyStopping(monitor='val_loss')],
-        callbacks=[pl.callbacks.ModelCheckpoint(filename="EBGAN-{epoch:02d}-{fid}",
+        callbacks=[pl.callbacks.ModelCheckpoint(filename="ECGAN-{epoch:02d}-{fid}",
                                                 monitor="fid", mode='min')],
         logger=wandb_logger,
         # logger=False,
