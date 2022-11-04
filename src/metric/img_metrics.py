@@ -18,15 +18,15 @@ class Fid_and_is(torch.nn.Module):
 
 
     def update(self, x, real):
-        with torch.no_grad():
-            feature, logit = self.eval_model.get_outputs(x, quantize=True)
-            logit = torch.nn.functional.softmax(logit, dim=1)
-            if real:
-                self.real_feature.append(feature)
-                self.real_logit.append(logit)
-            else:
-                self.fake_feature.append(feature)
-                self.fake_logit.append(logit)
+        # with torch.no_grad():
+        feature, logit = self.eval_model.get_outputs(x, quantize=True)
+        logit = torch.nn.functional.softmax(logit, dim=1)
+        if real:
+            self.real_feature.append(feature)
+            self.real_logit.append(logit)
+        else:
+            self.fake_feature.append(feature)
+            self.fake_logit.append(logit)
 
 
     def compute_ins(self):
@@ -34,6 +34,7 @@ class Fid_and_is(torch.nn.Module):
         return calculate_kl_div(fake_logit, 10)
 
     def compute_fid(self):
+        assert len(self.real_feature) == len(self.fake_feature), f'The number of feature({len(self.real_feature)}, {len(self.fake_feature)}) mis match'
         real_feature = torch.cat(self.real_feature)
         fake_feature = torch.cat(self.fake_feature)
         mu_real, sigma_real = calculate_mu_sigma(real_feature.cpu().numpy())

@@ -5,13 +5,8 @@ from torch.optim import Adam
 
 from utils.dataset import DataModule_
 from pytorch_lightning.loggers import WandbLogger
-from metric.inception_net import EvalModel
-from metric.ins import calculate_kl_div
-from metric.fid import calculate_mu_sigma, frechet_inception_distance
 import numpy as np
 from models import Generator, Discriminator
-# from torchmetrics.image.fid import FrechetInceptionDistance
-# from torchmetrics.image.inception import InceptionScore
 from argparse import ArgumentParser
 from metric.img_metrics import Fid_and_is
 import wandb
@@ -27,22 +22,10 @@ class GAN(pl.LightningModule):
         self.betas = betas
         self.img_dim = img_dim
         self.latent_dim = latent_dim
-        # self.eval_model = EvalModel()
         self.img_metric = Fid_and_is()
         self.G = Generator(img_dim=img_dim, latent_dim=latent_dim, num_classes=num_classes)
         self.D = Discriminator(img_dim=img_dim, latent_dim=latent_dim, num_classes=num_classes)
 
-        # mu_sigma_train = np.load('/shared_hdd/sin/save_files/img_cifar10.npz')
-        # self.mu_original, self.sigma_original = mu_sigma_train['mu'][-1], mu_sigma_train['sigma'][-1]
-
-        # if pre_train_path is not None:
-            # path = '/home/dblab/git/VAE-GAN/src/EBGAN/GAN/1gqzkv1e/checkpoints/epoch=28-step=1508.ckpt'
-            # weights = torch.load(pre_train_path)
-
-            # self.G.load_state_dict(weights['state_dict'], strict=False)
-            # self.D.load_state_dict(weights['state_dict'], strict=False)
-    def train(self, mode):
-        return super().train(False)
 
     def on_load_checkpoint(self, checkpoint):
         self.G.decoder.load_state_dict(checkpoint['decoder'])
@@ -56,13 +39,6 @@ class GAN(pl.LightningModule):
     def training_step(self, batch, batch_idx, optimizer_idx):
         real_imgs, real_labels = batch
         batch_size = real_imgs.size(0)
-        if self.global_step == 0:
-            self.img_metric.update(real_imgs, real=True)
-            # fid_real_img = ((0.5*real_imgs+0.5)*255.).to(torch.uint8)
-            # if self.img_dim == 1:
-            #     fid_real_img = fid_real_img.repeat(1,3,1,1)
-            # self.fid.update(fid_real_img, real=True)
-
 
         if optimizer_idx == 0:
             z = torch.randn(batch_size, self.latent_dim).to(self.device)
@@ -93,14 +69,10 @@ class GAN(pl.LightningModule):
             return g_loss
 
 
-    # def training_epoch_end(self, outputs):
-    #     z = torch.randn((100, self.latent_dim)).to(self.device)
-    #     label = torch.arange(0, 9, dtype=torch.long).repeat(10).to(self.device)
-    #     gened_imgs = self(z, label)
-    #     self.logger.log_image("img", [gened_imgs], self.trainer.current_epoch)
-
     def validation_step(self, batch, batch_idx):
-        imgs, labels = batch
+        real_imgs, labels = batch
+        if self.current_epoch == 0:
+            self.img_metric.update(real_imgs, real=True)
 
         # z = torch.randn((imgs.size(0), self.latent_dim)).to(self.device)
         # label = torch.arange(0, 9, dtype=torch.long).repeat(100).to(self.device)
@@ -111,12 +83,12 @@ class GAN(pl.LightningModule):
         # self.fid.update(imgs, real=True)
         # self.fid.update(gend_imgs, real=False)
 
-        with torch.no_grad():
+        # with torch.no_grad():
             # label = targets[i*batch_size : batch_size * (i + 1)].cuda()
             # z = torch.randn(label.size(0), latent_dim).cuda()
-            z = torch.randn((imgs.size(0), self.latent_dim)).to(self.device)
-            img_fake = self(z, labels)
-            self.img_metric.update(img_fake, real=False)
+        z = torch.randn((real_imgs.size(0), self.latent_dim)).to(self.device)
+        img_fake = self(z, labels)
+        self.img_metric.update(img_fake, real=False)
             # img_fake = ((0.5*img_fake+0.5)*255.).to(torch.uint8)
             # if self.img_dim == 1:
             #     img_fake = img_fake.repeat(1,3,1,1)
@@ -149,8 +121,8 @@ class GAN(pl.LightningModule):
 
         # print('ins_score', ins_score)
         # print('fid_score', fid_score)
-        self.log_dict({'fid': fid_score, 'ins_score': ins_score},
-                      logger=True, prog_bar=True, on_epoch=True, on_step=False)
+        self.log('fid', fid_score, logger=True, prog_bar=True, on_epoch=True, on_step=False)
+        self.log('ins', ins_score, logger=True, prog_bar=True, on_epoch=True, on_step=False)
         self.img_metric.reset(real=False)
         # self.ins.reset()
         # self.fid.reset()
@@ -265,14 +237,12 @@ if __name__ == "__main__":
     # dm = DataModule_(path_train='ß/home/dblab/sin/save_files/refer/ebgan_cifar10', batch_size=128)
     # dm = DataModule_(path_train='/home/dblab/git/PyTorch-StudioGAN/data/imb_cifar10/train', batch_size=128, num_workers=4)
     # model = GAN(latent_dim=128, img_dim=3, num_class=10)
-
-    # model
-
     # wandb.login(key='6afc6fd83ea84bf316238272eb71ef5a18efd445')
     # wandb.init(project='MYGAN', name='BEGAN-GAN')
 
-    wandb_logger = WandbLogger(project='MYTEST', name=f'BEGAN-GAN_pre-trained({args.data_name})', log_model=True)
+    wandb_logger = WandbLogger(project='MYTEST1', name=f'BEGAN-GAN(pre-trained_{args.data_name})', log_model=True)
     wandb.define_metric('fid', summary='min')
+
     trainer = pl.Trainer.from_argparse_args(args,
         fast_dev_run=False,
         default_root_dir='/shared_hdd/sin/save_files/EBGAN/',

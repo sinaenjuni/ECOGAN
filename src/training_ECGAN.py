@@ -5,15 +5,13 @@ from torch.optim import Adam
 
 from utils.dataset import DataModule_
 from pytorch_lightning.loggers import WandbLogger
-from metric.ins import calculate_kl_div
-from metric.fid import calculate_mu_sigma, frechet_inception_distance
 import numpy as np
 from models import Generator, Discriminator_EC
 from utils.losses import ExhustiveContrastiveLoss
 from argparse import ArgumentParser
 from metric.img_metrics import Fid_and_is
 import wandb
-from pathlib import Path
+
 
 class GAN(pl.LightningModule):
     def __init__(self, latent_dim, img_dim, num_classes, lr, betas, d_embed_dim, *args, **kwargs):
@@ -24,18 +22,11 @@ class GAN(pl.LightningModule):
         self.betas = betas
         self.img_dim = img_dim
         self.latent_dim = latent_dim
-        # self.eval_model = EvalModel()
         self.img_metric = Fid_and_is()
         self.G = Generator(img_dim=img_dim, latent_dim=latent_dim, num_classes=num_classes)
         self.D = Discriminator_EC(img_dim=img_dim, latent_dim=latent_dim, num_classes=num_classes, d_embed_dim=d_embed_dim)
 
-        # mu_sigma_train = np.load('/shared_hdd/sin/save_files/img_cifar10.npz')
-        # self.mu_original, self.sigma_original = mu_sigma_train['mu'][-1], mu_sigma_train['sigma'][-1]
-
         self.eco_loss = ExhustiveContrastiveLoss(num_classes=num_classes, temperature=1.0)
-
-    def train(self, mode):
-        return super().train(False)
 
     def forward(self, z, label):
         return self.G(z, label)
@@ -43,13 +34,10 @@ class GAN(pl.LightningModule):
     def training_step(self, batch, batch_idx, optimizer_idx):
         real_imgs, real_labels = batch
         batch_size = real_imgs.size(0)
-        if self.global_step == 0:
-            self.img_metric.update(real_imgs, real=True)
 
         if optimizer_idx == 0:
             z = torch.randn(batch_size, self.latent_dim).to(self.device)
             fake_labels = (torch.rand((batch_size,)) * 10).to(torch.long).to(self.device)
-            wrong_labels = (torch.rand((batch_size,)) * 10).to(torch.long).to(self.device)
 
             fake_imgs = self(z, real_labels).detach()
             fake_logits, _, _ = self.D(fake_imgs, fake_labels)
@@ -61,7 +49,7 @@ class GAN(pl.LightningModule):
             gp = self.compute_gradient_penalty(real_imgs, fake_imgs, real_labels)
             d_loss = d_adv_loss + gp * 10.0 + d_cond_loss
 
-            self.log('d_loss', d_loss, prog_bar=True, logger=True, on_epoch=True)
+            self.log('d_loss', d_loss, prog_bar=True, logger=True, on_epoch=True, on_step=False)
             return d_loss
 
         if optimizer_idx == 1:
@@ -74,18 +62,14 @@ class GAN(pl.LightningModule):
             g_cond_loss = self.eco_loss(gen_embed_data, gen_embed_label, fake_labels)
 
             g_loss = g_adv_loss + g_cond_loss
-            self.log('g_loss', g_loss, prog_bar=True, logger=True, on_epoch=True)
+            self.log('g_loss', g_loss, prog_bar=True, logger=True, on_epoch=True, on_step=False)
             return g_loss
 
 
-    # def training_epoch_end(self, outputs):
-    #     z = torch.randn((100, self.latent_dim)).to(self.device)
-    #     label = torch.arange(0, 9, dtype=torch.long).repeat(10).to(self.device)
-    #     gened_imgs = self(z, label)
-    #     self.logger.log_image("img", [gened_imgs], self.trainer.current_epoch)
-
     def validation_step(self, batch, batch_idx):
-        imgs, labels = batch
+        real_imgs, labels = batch
+        if self.current_epoch == 0:
+            self.img_metric.update(real_imgs, real=True)
         # z = torch.randn((imgs.size(0), self.latent_dim)).to(self.device)
         # label = torch.arange(0, 9, dtype=torch.long).repeat(100).to(self.device)
         # gend_imgs = self(z, labels)
@@ -95,12 +79,10 @@ class GAN(pl.LightningModule):
         # self.fid.update(imgs, real=True)
         # self.fid.update(gend_imgs, real=False)
 
-        with torch.no_grad():
-            # label = targets[i*batch_size : batch_size * (i + 1)].cuda()
-            # z = torch.randn(label.size(0), latent_dim).cuda()
-            z = torch.randn((imgs.size(0), self.latent_dim)).to(self.device)
-            img_fake = self(z, labels)
-            self.img_metric.update(img_fake, real=False)
+
+        z = torch.randn((real_imgs.size(0), self.latent_dim)).to(self.device)
+        img_fake = self(z, labels)
+        self.img_metric.update(img_fake, real=False)
 
             # embeddings, logits = self.eval_model(img_fake, quantize=True)
             # ps = torch.nn.functional.softmax(logits, dim=1)
@@ -126,8 +108,8 @@ class GAN(pl.LightningModule):
         # print('ins_score', ins_score)
         # print('fid_score', fid_score)
         # self.log_dict({'fid': fid_score, 'ins_score': ins_score}, logger=True, prog_bar=True, on_epoch=True)
-        self.log_dict({'fid': fid_score, 'ins_score': ins_score},
-                      logger=True, prog_bar=True, on_epoch=True, on_step=False)
+        self.log('fid', fid_score, logger=True, prog_bar=True, on_epoch=True, on_step=False)
+        self.log('ins', ins_score, logger=True, prog_bar=True, on_epoch=True, on_step=False)
         self.img_metric.reset(real=False)
         # print('valid_fid_epoch', self.fid.compute())
         # self.log('fid', self.fid.compute(), logger=True, prog_bar=True, on_epoch=True)
@@ -192,8 +174,6 @@ class GAN(pl.LightningModule):
 
 
 
-
-
 if __name__ == "__main__":
     # decoder = Decoder(3, 128)
     # z = torch.randn(100, 128)
@@ -243,14 +223,14 @@ if __name__ == "__main__":
     # wandb.login(key='6afc6fd83ea84bf316238272eb71ef5a18efd445')
     # wandb.init(project='MYGAN', name='BEGAN-GAN')
 
-    wandb_logger = WandbLogger(project='MYTEST', name=f'ECGAN({args.data_name}_{args.d_embed_dim})', log_model=True)
+    wandb_logger = WandbLogger(project='MYTEST1', name=f'ECOGAN({args.data_name}_{args.d_embed_dim})', log_model=True)
     wandb.define_metric('fid', summary='min')
     trainer = pl.Trainer.from_argparse_args(args,
         fast_dev_run=False,
-        default_root_dir='/shared_hdd/sin/save_files/ECGAN/',
+        default_root_dir='/shared_hdd/sin/save_files/ECOGAN/',
         max_epochs=100,
         # callbacks=[EarlyStopping(monitor='val_loss')],
-        callbacks=[pl.callbacks.ModelCheckpoint(filename="ECGAN-{epoch:02d}-{fid}",
+        callbacks=[pl.callbacks.ModelCheckpoint(filename="ECOGAN-{epoch:02d}-{fid}",
                                                 monitor="fid", mode='min')],
         logger=wandb_logger,
         # logger=False,
