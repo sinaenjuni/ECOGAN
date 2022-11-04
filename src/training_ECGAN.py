@@ -16,7 +16,7 @@ import wandb
 from pathlib import Path
 
 class GAN(pl.LightningModule):
-    def __init__(self, latent_dim, img_dim, num_classes, lr, betas, *args, **kwargs):
+    def __init__(self, latent_dim, img_dim, num_classes, lr, betas, d_embed_dim, *args, **kwargs):
         super(GAN, self).__init__()
         self.save_hyperparameters()
 
@@ -27,7 +27,7 @@ class GAN(pl.LightningModule):
         # self.eval_model = EvalModel()
         self.img_metric = Fid_and_is()
         self.G = Generator(img_dim=img_dim, latent_dim=latent_dim, num_classes=num_classes)
-        self.D = Discriminator_EC(img_dim=img_dim, latent_dim=latent_dim, num_classes=num_classes, d_embed_dim=512)
+        self.D = Discriminator_EC(img_dim=img_dim, latent_dim=latent_dim, num_classes=num_classes, d_embed_dim=d_embed_dim)
 
         # mu_sigma_train = np.load('/shared_hdd/sin/save_files/img_cifar10.npz')
         # self.mu_original, self.sigma_original = mu_sigma_train['mu'][-1], mu_sigma_train['sigma'][-1]
@@ -223,6 +223,7 @@ if __name__ == "__main__":
     parser.add_argument("--latent_dim", type=int, default=128, required=False)
     parser.add_argument("--batch_size", type=int, default=128, required=False)
     parser.add_argument("--gpus", nargs='+', type=int, default=7, required=False)
+    parser.add_argument("--d_embed_dim", type=int, default=512, required=False)
     parser.add_argument("--data_name", type=str, default='imb_FashionMNIST',
                         choices=['imb_CIFAR10', 'imb_MNIST', 'imb_FashionMNIST'], required=False)
 
