@@ -32,7 +32,6 @@ class GAN(pl.LightningModule):
         # mu_sigma_train = np.load('/shared_hdd/sin/save_files/img_cifar10.npz')
         # self.mu_original, self.sigma_original = mu_sigma_train['mu'][-1], mu_sigma_train['sigma'][-1]
 
-
         self.eco_loss = ExhustiveContrastiveLoss(num_classes=num_classes, temperature=1.0)
 
     def train(self, mode):
@@ -244,7 +243,7 @@ if __name__ == "__main__":
     # wandb.login(key='6afc6fd83ea84bf316238272eb71ef5a18efd445')
     # wandb.init(project='MYGAN', name='BEGAN-GAN')
 
-    wandb_logger = WandbLogger(project='MYTEST', name=f'ECGAN({args.data_name})', log_model=True)
+    wandb_logger = WandbLogger(project='MYTEST', name=f'ECGAN({args.data_name}_{args.d_embed_dim})', log_model=True)
     wandb.define_metric('fid', summary='min')
     trainer = pl.Trainer.from_argparse_args(args,
         fast_dev_run=False,
@@ -262,10 +261,3 @@ if __name__ == "__main__":
         num_sanity_val_steps=0
     )
     trainer.fit(model, datamodule=dm)
-
-
-
-    # img = torch.randn(100, 3, 64, 64)
-    # label = torch.randint(0,10, (100, ))
-    # ae =
-    # output = ae(img, label)
