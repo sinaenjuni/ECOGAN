@@ -32,12 +32,11 @@ class GenDataset(Dataset):
 
     def __getitem__(self, idx):
         label = self.label[idx]
-        img = self.G(torch.randn(1, 128), label[None,])
+        with torch.no_grad():
+            img = self.G(torch.randn(1, 128), label[None,])
         if self.transform is not None:
             img = self.transform(img)
         return img, label
-
-G(torch.randn(1, 128), label[1][None,])
 
 dataset = GenDataset()
 loader = DataLoader(dataset, batch_size=128, shuffle=True)
