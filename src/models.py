@@ -184,7 +184,7 @@ class Embedding_labeled_latent(nn.Module):
 
 
 class Generator(nn.Module):
-    def __init__(self, img_dim, latent_dim, num_classes):
+    def __init__(self, img_dim, latent_dim, num_classes, **kwargs):
         super(Generator, self).__init__()
 
         self.embedding = Embedding_labeled_latent(latent_dim=latent_dim, num_classes=num_classes)

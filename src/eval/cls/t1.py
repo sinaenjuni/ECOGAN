@@ -14,23 +14,34 @@ import numpy as np
 
 
 class GenDataset(Dataset):
-    def __init__(self, gne_dict, img_dim, latent_dim=128):
+    def __init__(self, transform=None):
         api = wandb.Api()
-        artifact = api.artifact(name=f'sinaenjuni/MYTEST1/ECOGAN(imb_FashionMNIST_512):v0', type='model')
-        artifact = api.artifact(name=f'sinaenjuni/MYTEST1/model-2ni8hs6n:v0', type='model')
+        # artifact = api.artifact(name=f'sinaenjuni/MYTEST1/ECOGAN(imb_FashionMNIST_512):v0', type='model')
+        artifact = api.artifact(name=f'sinaenjuni/MYTEST1/model-1rs1xxu8:v0', type='model')
         artifact_dir = artifact.download()
         ch = torch.load(Path(artifact_dir) / "model.ckpt")
         g_ch = {'.'.join(k.split('.')[1:]): w for k, w in ch['state_dict'].items() if 'G' in k}
-        G = Generator(**ch['hyper_parameters'])
-        G.load_state_dict(g_ch)
+        self.G = Generator(**ch['hyper_parameters'])
+        self.G.load_state_dict(g_ch)
 
         gen_dict = {1: 1000, 2: 100, 3: 1000, 4: 1000, 5: 1000, 6: 1000, 7: 1000, 8: 1000, 9: 1000}
-        label = np.concatenate([[k] * v for k, v in gen_dict.items()])
-
+        self.label = torch.tensor(np.concatenate([[k] * v for k, v in gen_dict.items()]))
+        self.transform = transform
     def __len__(self):
-        return len(label)
+        return len(self.label)
 
     def __getitem__(self, idx):
+        label = self.label[idx]
+        img = self.G(torch.randn(1, 128), label[None,])
+        if self.transform is not None:
+            img = self.transform(img)
+        return img, label
+
+G(torch.randn(1, 128), label[1][None,])
+
+dataset = GenDataset()
+loader = DataLoader(dataset, batch_size=128, shuffle=True)
+img, label = iter(loader).next()
 
 
 z = torch.rand(100, 128)
