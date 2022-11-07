@@ -240,7 +240,8 @@ class Discriminator_EC(nn.Module):
 
     def forward(self, img, label):
         x = self.encoder.getFeatures(img)
-        x = torch.sum(x, dim=[2,3])
+        # x = torch.sum(x, dim=[2,3])
+        x = torch.flatten(x, 1)
         adv_output = self.linear1(x)
 
         embed_data = self.linear2(x)

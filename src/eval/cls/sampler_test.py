@@ -36,7 +36,7 @@ weight = [n_sample / count for count in counts]
 weights = [weight[label] for label in label_tensor]
 
 dataset = TensorDataset(data_tensor, label_tensor)
-loader = DataLoader(dataset, batch_size=100, shuffle=False, sampler=WeightedRandomSampler(weights, 5500))
+loader = DataLoader(dataset, batch_size=100, shuffle=False, sampler=WeightedRandomSampler(weights, 5000))
 
 count = []
 for epoch in range(10):

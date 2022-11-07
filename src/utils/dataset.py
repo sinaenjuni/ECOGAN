@@ -2,14 +2,14 @@ import pytorch_lightning as pl
 from torch.utils.data import DataLoader
 from torchvision.datasets import ImageFolder
 from torchvision.transforms import Compose, PILToTensor, Normalize, ToTensor, Resize, Grayscale, Lambda
-from torch.utils.data import Dataset
-
+from torch.utils.data import Dataset, WeightedRandomSampler
+import numpy as np
 from pathlib import Path
 from PIL import Image
 
 
 class DataModule_(pl.LightningDataModule):
-    def __init__(self, data_name, img_dim, batch_size=128, num_workers=4, pin_memory=True):
+    def __init__(self, data_name, img_size, img_dim, batch_size=128, num_workers=4, pin_memory=True):
         super(DataModule_, self).__init__()
         self.batch_size = batch_size
 
@@ -20,27 +20,38 @@ class DataModule_(pl.LightningDataModule):
                       'imb_MNIST': '/home/shared_hdd/shared_hdd/sin/save_files/imb_MNIST/val',
                       'imb_FashionMNIST': '/home/shared_hdd/shared_hdd/sin/save_files/imb_FashionMNIST/val'}
 
+        self.img_size = img_size
         self.img_dim = img_dim
         self.data_name = data_name
         self.path_train = paths_train[self.data_name]
         self.path_test = paths_test[self.data_name]
         self.transforms = Compose([ToTensor(),
                                    Grayscale() if self.img_dim == 1 else Lambda(lambda x: x),
-                                   Resize(64),
+                                   Resize(self.img_size),
                                    Normalize(mean=[0.5] * self.img_dim,
                                              std=[0.5] * self.img_dim)
                                     ])
         self.num_workers = num_workers
         self.pin_memory = pin_memory
 
+
     def setup(self, stage):
         self.dataset_train = ImageFolder(self.path_train, transform=self.transforms)
         self.dataset_test = ImageFolder(self.path_test, transform=self.transforms)
 
+        unique, counts = np.unique(self.dataset_train.targets, return_counts=True)
+        n_sample = len(self.dataset_train.targets)
+        weight = [n_sample / count for count in counts]
+        weights = [weight[label] for label in self.dataset_train.targets]
+        self.sampler = WeightedRandomSampler(weights, 5000)
+
+
+
     def train_dataloader(self):
         return DataLoader(self.dataset_train,
                           batch_size=self.batch_size,
-                          shuffle=True,
+                          sampler=self.sampler,
+                          # shuffle=True,
                           num_workers=self.num_workers,
                           pin_memory=True)
 
@@ -84,8 +95,8 @@ class MergeDataset(Dataset):
         return img, label
 
 if __name__ == "__main__":
-    dm = DataModule_(data_name='imb_CIFAR10', img_dim=3)
-    dm = DataModule_(data_name='imb_MNIST', img_dim=1)
+    dm = DataModule_(data_name='imb_CIFAR10', img_size = 64, img_dim=3)
+    dm = DataModule_(data_name='imb_MNIST', img_size = 64, img_dim=1)
     dm.setup('fit')
     dm.setup('val')
 
@@ -93,10 +104,19 @@ if __name__ == "__main__":
     img, label = batch
     print(img.shape, label.shape, img.min(), img.max())
 
-    print(dm.train_dataloader())
-    print(dm.val_dataloader())
+    # print(dm.train_dataloader())
+    # print(dm.val_dataloader())
+    #
+    #
+    # dataset = ImageFolder('/home/dblab/sin/save_files/refer/ebgan_cifar10', Compose([ToTensor(),
+    #                                                                        Normalize(mean=(0.5, 0.5, 0.5),
+    #                                                                                  std=(0.5, 0.5, 0.5))]))
 
+    count = []
+    for epoch in range(100):
+        for batch in dm.train_dataloader():
+            data, label = batch
+            # print(label)
+            count.append(label.numpy())
 
-    dataset = ImageFolder('/home/dblab/sin/save_files/refer/ebgan_cifar10', Compose([ToTensor(),
-                                                                           Normalize(mean=(0.5, 0.5, 0.5),
-                                                                                     std=(0.5, 0.5, 0.5))]))
+    np.unique(np.concatenate(count), return_counts=True)
