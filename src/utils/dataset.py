@@ -100,8 +100,15 @@ if __name__ == "__main__":
     dm = DataModule_(data_name='imb_CIFAR10', is_sampling=False, img_size = 64, img_dim=3)
     dm.setup('fit')
     np.unique(dm.dataset_train.targets, return_counts=True)
+
     dm = DataModule_(data_name='imb_MNIST', is_sampling=False, img_size = 64, img_dim=1)
+    dm.setup('fit')
+    np.unique(dm.dataset_train.targets, return_counts=True)
+
     dm = DataModule_(data_name='imb_FashionMNIST', is_sampling=False, img_size = 64, img_dim=1)
+    dm.setup('fit')
+    np.unique(dm.dataset_train.targets, return_counts=True)
+
     dm.setup('fit')
     dm.setup('val')
 

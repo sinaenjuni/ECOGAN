@@ -21,8 +21,9 @@ class GenDataset(Dataset):
         artifact_dir = artifact.download()
         ch = torch.load(Path(artifact_dir) / "model.ckpt")
         g_ch = {'.'.join(k.split('.')[1:]): w for k, w in ch['state_dict'].items() if 'G' in k}
-        self.G = Generator(**ch['hyper_parameters'])
+        self.G = Generator(**ch['hyper_parameters']).cuda()
         self.G.load_state_dict(g_ch)
+
 
         gen_dict = {1: 1000, 2: 100, 3: 1000, 4: 1000, 5: 1000, 6: 1000, 7: 1000, 8: 1000, 9: 1000}
         self.label = torch.tensor(np.concatenate([[k] * v for k, v in gen_dict.items()]))
@@ -31,9 +32,9 @@ class GenDataset(Dataset):
         return len(self.label)
 
     def __getitem__(self, idx):
-        label = self.label[idx]
+        label = self.label[idx].cuda()
         with torch.no_grad():
-            img = self.G(torch.randn(1, 128), label[None,])
+            img = self.G(torch.randn(1, 128).cuda(), label[None,])
         if self.transform is not None:
             img = self.transform(img)
         return img, label
