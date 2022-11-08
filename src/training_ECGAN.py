@@ -199,8 +199,10 @@ if __name__ == "__main__":
     parser.add_argument("--lr", type=float, default=0.0002, required=False)
     parser.add_argument("--betas", type=tuple, default=(0.5, 0.9), required=False)
     parser.add_argument("--img_dim", type=int, default=1, required=False)
+    parser.add_argument("--img_size", type=int, default=64, required=False)
     parser.add_argument("--latent_dim", type=int, default=128, required=False)
     parser.add_argument("--batch_size", type=int, default=128, required=False)
+    parser.add_argument("--is_sampling", type=bool, default=False, required=False)
     parser.add_argument("--gpus", nargs='+', type=int, default=7, required=False)
     parser.add_argument("--d_embed_dim", type=int, default=512, required=False)
     parser.add_argument("--data_name", type=str, default='imb_FashionMNIST',
@@ -223,7 +225,7 @@ if __name__ == "__main__":
     # wandb.login(key='6afc6fd83ea84bf316238272eb71ef5a18efd445')
     # wandb.init(project='MYGAN', name='BEGAN-GAN')
 
-    wandb_logger = WandbLogger(project='MYTEST1', name=f'ECOGAN({args.data_name}_{args.d_embed_dim})', log_model=True)
+    wandb_logger = WandbLogger(project='MYTEST1', name=f'ECOGAN', log_model=True)
     wandb.define_metric('fid', summary='min')
     trainer = pl.Trainer.from_argparse_args(args,
         fast_dev_run=False,

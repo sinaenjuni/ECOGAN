@@ -17,7 +17,7 @@ class GenDataset(Dataset):
     def __init__(self, transform=None):
         api = wandb.Api()
         # artifact = api.artifact(name=f'sinaenjuni/MYTEST1/ECOGAN(imb_FashionMNIST_512):v0', type='model')
-        artifact = api.artifact(name=f'sinaenjuni/MYTEST1/model-1rs1xxu8:v0', type='model')
+        artifact = api.artifact(name=f'sinaenjuni/MYTEST1/model-3r7a3cr2:v0', type='model')
         artifact_dir = artifact.download()
         ch = torch.load(Path(artifact_dir) / "model.ckpt")
         g_ch = {'.'.join(k.split('.')[1:]): w for k, w in ch['state_dict'].items() if 'G' in k}

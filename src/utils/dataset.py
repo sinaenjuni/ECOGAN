@@ -9,7 +9,7 @@ from PIL import Image
 
 
 class DataModule_(pl.LightningDataModule):
-    def __init__(self, data_name, img_size, img_dim, batch_size=128, num_workers=4, pin_memory=True):
+    def __init__(self, data_name, img_size, img_dim, is_sampling, batch_size=128, num_workers=4, pin_memory=True):
         super(DataModule_, self).__init__()
         self.batch_size = batch_size
 
@@ -23,6 +23,7 @@ class DataModule_(pl.LightningDataModule):
         self.img_size = img_size
         self.img_dim = img_dim
         self.data_name = data_name
+        self.is_sampling = is_sampling
         self.path_train = paths_train[self.data_name]
         self.path_test = paths_test[self.data_name]
         self.transforms = Compose([ToTensor(),
@@ -39,19 +40,20 @@ class DataModule_(pl.LightningDataModule):
         self.dataset_train = ImageFolder(self.path_train, transform=self.transforms)
         self.dataset_test = ImageFolder(self.path_test, transform=self.transforms)
 
-        unique, counts = np.unique(self.dataset_train.targets, return_counts=True)
-        n_sample = len(self.dataset_train.targets)
-        weight = [n_sample / count for count in counts]
-        weights = [weight[label] for label in self.dataset_train.targets]
-        self.sampler = WeightedRandomSampler(weights, 5000)
+        if self.is_sampling:
+            unique, counts = np.unique(self.dataset_train.targets, return_counts=True)
+            n_sample = len(self.dataset_train.targets)
+            weight = [n_sample / count for count in counts]
+            weights = [weight[label] for label in self.dataset_train.targets]
+            self.sampler = WeightedRandomSampler(weights, 5000)
 
 
 
     def train_dataloader(self):
         return DataLoader(self.dataset_train,
                           batch_size=self.batch_size,
-                          sampler=self.sampler,
-                          # shuffle=True,
+                          sampler=self.sampler if self.is_sampling else None,
+                          shuffle=False if self.is_sampling else True,
                           num_workers=self.num_workers,
                           pin_memory=True)
 
@@ -95,8 +97,11 @@ class MergeDataset(Dataset):
         return img, label
 
 if __name__ == "__main__":
-    dm = DataModule_(data_name='imb_CIFAR10', img_size = 64, img_dim=3)
-    dm = DataModule_(data_name='imb_MNIST', img_size = 64, img_dim=1)
+    dm = DataModule_(data_name='imb_CIFAR10', is_sampling=False, img_size = 64, img_dim=3)
+    dm.setup('fit')
+    np.unique(dm.dataset_train.targets, return_counts=True)
+    dm = DataModule_(data_name='imb_MNIST', is_sampling=False, img_size = 64, img_dim=1)
+    dm = DataModule_(data_name='imb_FashionMNIST', is_sampling=False, img_size = 64, img_dim=1)
     dm.setup('fit')
     dm.setup('val')
 

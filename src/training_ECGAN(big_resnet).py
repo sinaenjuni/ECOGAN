@@ -9,9 +9,20 @@ import numpy as np
 # from models import Generator, Discriminator_EC
 from big_resnet import Generator, Discriminator
 from utils.losses import ExhustiveContrastiveLoss
-from argparse import ArgumentParser
+from utils.losses import ConditionalContrastiveLoss
+from argparse import ArgumentParser, ArgumentTypeError
 from metric.img_metrics import Fid_and_is
 import wandb
+
+def str2bool(v):
+    if isinstance(v, bool):
+       return v
+    if v.lower() in ('yes', 'true', 't', 'y', '1'):
+        return True
+    elif v.lower() in ('no', 'false', 'f', 'n', '0'):
+        return False
+    else:
+        raise ArgumentTypeError('Boolean value expected.')
 
 
 class GAN(pl.LightningModule):
@@ -33,12 +44,18 @@ class GAN(pl.LightningModule):
         self.normalize_d_embed = self.hparams.normalize_d_embed
         self.d_init = self.hparams.d_init
         self.num_classes = self.hparams.num_classes
+        self.cond_lambda = self.hparams.cond_lambda
+
+        self.best_fid = float("inf")
 
         self.img_metric = Fid_and_is()
         self.G = Generator(self.z_dim, self.g_shared_dim, self.img_size, self.img_dim, self.g_conv_dim, self.num_classes, self.g_init)
         self.D = Discriminator(self.img_size, self.img_dim, self.d_conv_dim, self.d_embed_dim, self.normalize_d_embed, self.num_classes, self.d_init)
 
-        self.eco_loss = ExhustiveContrastiveLoss(num_classes=self.num_classes, temperature=1.0)
+        if self.hparams.cnd_loss_fn == 'eco_loss':
+            self.cnd_loss = ExhustiveContrastiveLoss(num_classes=self.num_classes, temperature=self.hparams.temperature)
+        elif self.hparams.cnd_loss_fn == '2c_loss':
+            self.cnd_loss = ConditionalContrastiveLoss(num_classes=self.num_classes, temperature=self.hparams.temperature)
 
     def forward(self, z, label):
         return self.G(z, label)
@@ -57,10 +74,10 @@ class GAN(pl.LightningModule):
 
 
             d_adv_loss = self.d_loss(real_logits, fake_logits)
-            d_cond_loss = self.eco_loss(embed_data, embed_label, real_labels)
+            d_cond_loss = self.cnd_loss(embed_data, embed_label, real_labels)
             # gp = self.compute_gradient_penalty(real_imgs, fake_imgs, real_labels)
             # d_loss = d_adv_loss + gp * 10.0 + d_cond_loss
-            d_loss = d_adv_loss + d_cond_loss
+            d_loss = d_adv_loss + self.cond_lambda * d_cond_loss
             self.log('d_loss', d_loss, prog_bar=True, logger=True, on_epoch=True, on_step=False)
             return d_loss
 
@@ -71,9 +88,9 @@ class GAN(pl.LightningModule):
             gen_imgs = self(z, fake_labels)
             gen_logits, gen_embed_data, gen_embed_label = self.D(gen_imgs, fake_labels)
             g_adv_loss = self.g_loss(gen_logits)
-            g_cond_loss = self.eco_loss(gen_embed_data, gen_embed_label, fake_labels)
+            g_cond_loss = self.cnd_loss(gen_embed_data, gen_embed_label, fake_labels)
 
-            g_loss = g_adv_loss + g_cond_loss
+            g_loss = g_adv_loss + self.cond_lambda * g_cond_loss
             self.log('g_loss', g_loss, prog_bar=True, logger=True, on_epoch=True, on_step=False)
             return g_loss
 
@@ -116,6 +133,13 @@ class GAN(pl.LightningModule):
 
         ins_score = self.img_metric.compute_ins()[0]
         fid_score = self.img_metric.compute_fid()
+
+        if self.best_fid > fid_score:
+            self.best_epoch = self.current_epoch
+            wandb.summary['best/fid'] = fid_score
+            wandb.summary['best/ins'] = ins_score
+            wandb.summary['best/epoch'] = self.current_epoch
+
 
         # print('ins_score', ins_score)
         # print('fid_score', fid_score)
@@ -207,11 +231,12 @@ if __name__ == "__main__":
     # model = GAN(latent_dim=128, img_dim=3, num_class=10)
 
     parser = ArgumentParser()
+    parser.add_argument("--max_epochs", type=int, default=100, required=True)
+
     parser.add_argument("--num_classes", type=int, default=10, required=False)
     parser.add_argument("--lr", type=float, default=0.0002, required=False)
-    parser.add_argument("--betas", type=tuple, default=(0.5, 0.9), required=False)
-    parser.add_argument("--img_size", type=int, default=32, required=False)
-    parser.add_argument("--img_dim", type=int, default=1, required=False)
+    parser.add_argument("--betas", type=tuple, default=(0.5, 0.999), required=False)
+
     parser.add_argument("--z_dim", type=int, default=80, required=False)
     parser.add_argument("--g_shared_dim", type=int, default=128, required=False)
     parser.add_argument("--g_conv_dim", type=int, default=96, required=False)
@@ -219,10 +244,17 @@ if __name__ == "__main__":
     parser.add_argument("--d_embed_dim", type=int, default=512, required=False)
     parser.add_argument("--g_init", type=str, default='ortho', required=False)
     parser.add_argument("--d_init", type=str, default='ortho', required=False)
-    parser.add_argument("--normalize_d_embed", type=bool, default=True, required=False)
+    parser.add_argument("--normalize_d_embed", type=str2bool, default=True, required=False)
 
+    parser.add_argument("--cnd_loss_fn", type=str, default='eco_loss', required=False)
+    parser.add_argument("--temperature", type=float, default=1.0, required=False)
+    parser.add_argument("--cond_lambda", type=float, default=1.0, required=False)
+
+    parser.add_argument("--img_size", type=int, default=32, required=False)
+    parser.add_argument("--img_dim", type=int, default=1, required=True)
     parser.add_argument("--batch_size", type=int, default=128, required=False)
-    parser.add_argument("--gpus", nargs='+', type=int, default=7, required=False)
+    parser.add_argument("--is_sampling", type=str2bool, default=True, required=True)
+    parser.add_argument("--gpus", nargs='+', type=int, default=7, required=True)
     parser.add_argument("--data_name", type=str, default='imb_FashionMNIST',
                         choices=['imb_CIFAR10', 'imb_MNIST', 'imb_FashionMNIST'], required=False)
 
@@ -243,12 +275,12 @@ if __name__ == "__main__":
     # wandb.login(key='6afc6fd83ea84bf316238272eb71ef5a18efd445')
     # wandb.init(project='MYGAN', name='BEGAN-GAN')
 
-    wandb_logger = WandbLogger(project='MYTEST1', name=f'ECOGAN(sampler_big-resnet_{args.data_name}_{args.d_embed_dim})', log_model=True)
-    wandb.define_metric('fid', summary='min')
+    wandb_logger = WandbLogger(project='MYTEST1', name=f'ECOGAN', log_model=True)
+    # wandb.define_metric('fid', summary='min')
     trainer = pl.Trainer.from_argparse_args(args,
         fast_dev_run=False,
         default_root_dir='/shared_hdd/sin/save_files/ECOGAN/',
-        max_epochs=100,
+        # max_epochs=100,
         # callbacks=[EarlyStopping(monitor='val_loss')],
         callbacks=[pl.callbacks.ModelCheckpoint(filename="ECOGAN-{epoch:02d}-{fid}",
                                                 monitor="fid", mode='min')],
