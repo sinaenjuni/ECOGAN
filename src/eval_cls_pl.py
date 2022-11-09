@@ -4,8 +4,9 @@
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
+import torchvision.datasets
 # from torchvision.transforms import Compose, Normalize, ToTensor, Resize
-# from torchvision.datasets import ImageFolder
+from torchvision.datasets import ImageFolder
 # from torch.utils.data import DataLoader, Dataset
 from torchvision.models import resnet18
 from torch.optim import Adam, SGD
@@ -20,21 +21,60 @@ from argparse import ArgumentParser
 import pytorch_lightning as pl
 from pytorch_lightning.loggers import WandbLogger
 import wandb
-from utils.dataset import DataModule_
+from utils.dataset import DataModule_, Eval_gen_cls_dataset
+from pathlib import Path
 
-ori_imb_data_path = "/home/dblab/git/PyTorch-StudioGAN/data/imb_cifar10/train"
-# paths = {"EBGAN_gened_data_path" : "/home/dblab/git/EBGAN/save_files/EBGAN_restore_data",
-#          "ContraGAN_gened_data_path" : "/home/dblab/git/ECOGNA/save_files/contraGAN_restore_data",
-#          "ECOGAN_gened_data_path" : "/home/dblab/git/ECOGNA/save_files/ECOGAN_restore_data"}
 
-paths = {"EBGAN_gened_data_path" : "/shared_hdd/sin/save_files/gened_img/EBGAN",
-         "BEGAN_pre-trained_gened_data_path" : "/shared_hdd/sin/save_files/gened_img/EBGAN_pre-trained",
-         # "ECOGAN_gened_data_path" : "/shared_hdd/sin/save_files/gened_img/ECOGAN"
-}
+# ori_imb_data_path = "/home/dblab/git/PyTorch-StudioGAN/data/imb_cifar10/train"
+# # paths = {"EBGAN_gened_data_path" : "/home/dblab/git/EBGAN/save_files/EBGAN_restore_data",
+# #          "ContraGAN_gened_data_path" : "/home/dblab/git/ECOGNA/save_files/contraGAN_restore_data",
+# #          "ECOGAN_gened_data_path" : "/home/dblab/git/ECOGNA/save_files/ECOGAN_restore_data"}
+#
+# paths = {"EBGAN_gened_data_path" : "/shared_hdd/sin/save_files/gened_img/EBGAN",
+#          "BEGAN_pre-trained_gened_data_path" : "/shared_hdd/sin/save_files/gened_img/EBGAN_pre-trained",
+#          # "ECOGAN_gened_data_path" : "/shared_hdd/sin/save_files/gened_img/ECOGAN"
+# }
 
-class Classification_Model(pl.LightningModule):
+# gen_path = Path('/shared_hdd/sin/gen/')
+# gen_path = Path('/shared_hdd/sin/gen/2000/ECOGAN(imb_CIFAR10_128)')
+#
+# for i in gen_path.glob('*/*'):
+#     # print(i)
+#     print(int(i.parts[-2][-1]))
+# t_path = list(gen_path.glob('*/*'))
+#
+# [i for i in gen_path.glob('*/*/*/*')]
+
+
+
+# for path_ in gen_path.glob('*/*'):
+#     print(path_)
+#     for ori_name, ori_path in paths_train.items():
+#         if ori_name in str(path_):
+#             print(path_, ori_name)
+#     # if str(path_) in paths_train.keys():
+#     #     print(path_)
+#
+#     # dataset = ImageFolder(type)
+#     # print(dataset, dataset.classes)
+#
+# data_names = ['imb_CIFAR10', 'imb_MNIST', 'imb_FashionMNIST']
+# sel_name = [data_name for data_name in data_names if data_name in str(path_)][0]
+#
+
+
+paths_train = {'imb_CIFAR10': '/home/dblab/git/PyTorch-StudioGAN/data/imb_cifar10/train',
+               'imb_MNIST': '/home/shared_hdd/shared_hdd/sin/save_files/imb_MNIST/train',
+               'imb_FashionMNIST': '/home/shared_hdd/shared_hdd/sin/save_files/imb_FashionMNIST/train'}
+
+paths_test = {'imb_CIFAR10': '/home/dblab/git/PyTorch-StudioGAN/data/imb_cifar10/val',
+              'imb_MNIST': '/home/shared_hdd/shared_hdd/sin/save_files/imb_MNIST/val',
+              'imb_FashionMNIST': '/home/shared_hdd/shared_hdd/sin/save_files/imb_FashionMNIST/val'}
+
+
+class Eval_cls_model(pl.LightningModule):
     def __init__(self, img_dim, num_classes, lr, **kwargs):
-        super(Classification_Model, self).__init__()
+        super(Eval_cls_model, self).__init__()
         self.save_hyperparameters()
 
         self.lr = lr
@@ -92,11 +132,10 @@ class Classification_Model(pl.LightningModule):
         self.log_dict(log_dict, prog_bar=False, logger=True, on_step=False, on_epoch=True)
         if self.best_acc < acc:
             self.best_acc = acc
-            wandb.run.summary['best/epoch'] = self.current_epoch + 1
-            wandb.run.summary['best/acc'] = acc
+            self.logger.log_metrics({'best/epoch': self.current_epoch + 1})
+            self.logger.log_metrics({'best/acc': acc})
             for idx, acc_ in enumerate(acc_per_cls):
-                wandb.run.summary[f'best/acc_cls{idx}'] = acc_
-
+                self.logger.log_metrics({f'best/acc_cls{idx}':acc_})
 
     def ce_loss(self, logit, label):
         return F.cross_entropy(logit, label)
@@ -106,7 +145,7 @@ class Classification_Model(pl.LightningModule):
 
 
 # dm = DataModule_(data_name, batch_size=128)
-# model = Classification_Model(num_classes=10, lr=0.01)
+# model = Eval_cls_model(num_classes=10, lr=0.01)
 
 
 
@@ -122,32 +161,39 @@ class Classification_Model(pl.LightningModule):
 # )
 
 parser = ArgumentParser()
+# parser.add_argument("--gen_path", type=str, required=True)
 parser.add_argument("--num_classes", type=int, default=10, required=False)
+parser.add_argument("--max_epochs", type=int, default=100, required=False)
 parser.add_argument("--lr", type=float, default=0.01, required=False)
-parser.add_argument("--img_dim", type=int, default=3, required=True)
+parser.add_argument("--img_size", type=int, default=32, required=False)
+parser.add_argument("--is_sampling", type=bool, default=False, required=False)
+parser.add_argument("--img_dim", type=int, default=3, required=False)
 parser.add_argument("--data_name", type=str, default='imb_CIFAR10',
-                    choices=['imb_CIFAR10', 'imb_MNIST', 'imb_FashionMNIST'], required=True)
+                    choices=['imb_CIFAR10', 'imb_MNIST', 'imb_FashionMNIST'], required=False)
 
 
 args = parser.parse_args()
+# dm = Eval_gen_cls_dataset.from_argparse_args(args)
 dm = DataModule_.from_argparse_args(args)
+# parser.add_argument("--img_dim", type=int, default=dm.img_dim, required=False)
+# args = parser.parse_args()
 
-model = Classification_Model(**vars(args))
-wandb_logger = WandbLogger(project="eval_cls", name=f"{args.data_name}", log_model=True)
+model = Eval_cls_model(**vars(args))
+wandb_logger = WandbLogger(project="eval_cls", name=f"original", log_model=True)
 # wandb.define_metric('val/acc', summary='max')
-wandb_logger.watch(model, log='all')
+# wandb_logger.watch(model, log='all')ß
 
 trainer = pl.Trainer.from_argparse_args(args,
     default_root_dir='/shared_hdd/sin/save_files/cls_tset/',
-    fast_dev_run=False,
-    max_epochs=100,
+    # fast_dev_run=True,
+    # max_epochs=200,
     # callbacks=[pl.callbacks.ModelCheckpoint(monitor="val/acc", mode='max')],
     logger=wandb_logger,
     # strategy='ddp',
     strategy='ddp_find_unused_parameters_false',
     accelerator='gpu',
-    gpus=1,
-    # num_sanity_val_steps=0
+    gpus=[6, 7],
+    num_sanity_val_steps=0
 )
 trainer.fit(model, datamodule=dm)
 

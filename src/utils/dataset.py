@@ -35,7 +35,6 @@ class DataModule_(pl.LightningDataModule):
         self.num_workers = num_workers
         self.pin_memory = pin_memory
 
-
     def setup(self, stage):
         self.dataset_train = ImageFolder(self.path_train, transform=self.transforms)
         self.dataset_test = ImageFolder(self.path_test, transform=self.transforms)
@@ -67,23 +66,75 @@ class DataModule_(pl.LightningDataModule):
     # def test_dataloader(self):
     #     return DataLoader(self.valid_dataset, batch_size=self.batch_size)
 
+
+class Eval_gen_cls_dataset(pl.LightningDataModule):
+    def __init__(self, gen_path, img_size, batch_size=128, num_workers=4, pin_memory=True, *args, **kwargs):
+        super(Eval_gen_cls_dataset, self).__init__()
+
+        data_names = ['imb_CIFAR10', 'imb_MNIST', 'imb_FashionMNIST']
+        self.img_dims = {'imb_CIFAR10':3, 'imb_MNIST':1, 'imb_FashionMNIST':1}
+        self.sel_name = [data_name for data_name in data_names if data_name in str(gen_path)][0]
+
+        self.paths_train = {'imb_CIFAR10': '/home/dblab/git/PyTorch-StudioGAN/data/imb_cifar10/train',
+                       'imb_MNIST': '/home/shared_hdd/shared_hdd/sin/save_files/imb_MNIST/train',
+                       'imb_FashionMNIST': '/home/shared_hdd/shared_hdd/sin/save_files/imb_FashionMNIST/train'}
+        self.paths_test = {'imb_CIFAR10': '/home/dblab/git/PyTorch-StudioGAN/data/imb_cifar10/val',
+                      'imb_MNIST': '/home/shared_hdd/shared_hdd/sin/save_files/imb_MNIST/val',
+                      'imb_FashionMNIST': '/home/shared_hdd/shared_hdd/sin/save_files/imb_FashionMNIST/val'}
+
+        self.data = []
+        self.targets = []
+        self.batch_size = batch_size
+        self.img_size = img_size
+        self.img_dim = self.img_dims[self.sel_name]
+        self.path_train0 = self.paths_train[self.sel_name]
+        self.path_train1 = gen_path
+        self.path_test = self.paths_test[self.sel_name]
+
+        self.transforms = Compose([ToTensor(),
+                                   Grayscale() if self.img_dim == 1 else Lambda(lambda x: x),
+                                   Resize(self.img_size),
+                                   Normalize(mean=[0.5] * self.img_dim,
+                                             std=[0.5] * self.img_dim)
+                                    ])
+        self.num_workers = num_workers
+        self.pin_memory = pin_memory
+
+    def setup(self, stage):
+        self.dataset_train = MergeDataset(self.path_train0, self.path_train1, transform=self.transforms)
+        self.dataset_test = ImageFolder(self.path_test, transform=self.transforms)
+    def train_dataloader(self):
+        return DataLoader(self.dataset_train,
+                          batch_size=self.batch_size,
+                          shuffle=True,
+                          num_workers=self.num_workers,
+                          pin_memory=True)
+
+    def val_dataloader(self):
+        return DataLoader(self.dataset_test,
+                          batch_size=self.batch_size,
+                          shuffle=False,
+                          num_workers=self.num_workers,
+                          pin_memory=True)
+
 class MergeDataset(Dataset):
     def __init__(self, path1, path2, transform=None):
         self.path1 = Path(path1)
         self.path2 = Path(path2)
-
         self.images = []
         self.targets = []
-
-        self.get_data_paths(path1)
-        self.get_data_paths(path2)
-
+        self.get_data(path1)
+        self.get_data(path2)
         self.transform = transform
 
-    def get_data_paths(self, path):
-        for path_ in Path(path).glob("*/*.JPEG"):
-            self.images.append(path_)
-            self.targets.append(int(path_.parts[-2][-1]))
+    def get_data(self, path:str):
+        path = Path(path)
+        for img_path in path.glob("*/*.JPEG"):
+            self.images.append(img_path)
+            self.targets.append(int(img_path.parts[-2][-1]))
+        for img_path in path.glob("*/*.png"):
+            self.images.append(img_path)
+            self.targets.append(int(img_path.parts[-2][-1]))
 
     def __len__(self):
         return len(self.targets)
@@ -95,6 +146,9 @@ class MergeDataset(Dataset):
 
         label = self.targets[idx]
         return img, label
+
+
+
 
 if __name__ == "__main__":
     dm = DataModule_(data_name='imb_CIFAR10', is_sampling=False, img_size = 64, img_dim=3)

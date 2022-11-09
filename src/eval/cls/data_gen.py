@@ -7,19 +7,69 @@ from pathlib import Path
 import torch
 from torch.utils.data import Dataset, DataLoader
 from torchvision.datasets import ImageFolder
-# from models import Generator
-from big_resnet import Generator
+from models import Generator
+# from big_resnet import Generator
 from torchvision.transforms import ToTensor, Compose, Normalize
 
 import matplotlib.pyplot as plt
-from torchvision.utils import make_grid
+from torchvision.utils import make_grid, save_image
 import numpy as np
 from tqdm import  tqdm
+from PIL import Image
 
+batch_size = 128
+rate = 4000
+gen_dict = {1:rate, 2:rate, 3:rate, 4:rate, 5:rate, 6:rate, 7:rate, 8:rate, 9:rate}
+label = torch.tensor(np.concatenate([[k] * v for k, v in gen_dict.items()]))
+base_path = Path('/shared_hdd/sin/gen/')
+
+api = wandb.Api()
+target_name = []
+for i in api.artifact_type(type_name='model', project='MYTEST1').collections():
+    if 'GAN' in i.name:
+        print(i.name)
+        target_name.append(i.name)
+
+for name in target_name:
+    # print(name)
+    ## load model from weight
+    artifact = api.artifact(name=f'sinaenjuni/MYTEST1/{name}:v0', type='model')
+    artifact_dir = artifact.download()
+    ch = torch.load(Path(artifact_dir) / "model.ckpt", map_location=torch.device('cuda'))
+    g_ch = {'.'.join(k.split('.')[1:]): w for k, w in ch['state_dict'].items() if 'G' in k}
+    G = Generator(**ch['hyper_parameters']).cuda()
+    ret = G.load_state_dict(g_ch)
+    print(ret)
+
+    pbar = tqdm(desc=name, iterable=range(len(label)))
+    # gen dataset
+    for idx in range(0, (len(label)//batch_size)+1):
+        batch_label = label[idx * batch_size: (idx+1) * batch_size]
+
+        z = torch.randn(batch_label.size(0), 128).cuda()
+        imgs = G(z, batch_label.cuda())
+        imgs = imgs.mul(255).add_(0.5).clamp_(0, 255).to("cpu", torch.uint8)
+
+        for idx_, (img, cls) in enumerate(zip(imgs, batch_label)):
+            # print(idx * batch_size + idx_)
+            save_path = base_path / str(rate) / name / str(cls.item())
+            if not save_path.exists():
+                save_path.mkdir(exist_ok=True, parents=True)
+            if img.size(0) == 1:
+                img = img.squeeze()
+                img = Image.fromarray(img.numpy())
+            else:
+                img = Image.fromarray(img.permute(1, 2, 0).numpy())
+
+            img.save(save_path/f'{idx * batch_size + idx_}.png')
+            pbar.update()
+
+
+# save_path.mkdir(exist_ok=True, parents=True)
+# save_image(img, save_path/'img.png')
 
 class GenDataset(Dataset):
     def __init__(self, gen_dict = {1: 1000, 2: 100, 3: 1000, 4: 1000, 5: 1000, 6: 1000, 7: 1000, 8: 1000, 9: 1000}, transform=None):
-        api = wandb.Api()
         # artifact = api.artifact(name=f'sinaenjuni/MYTEST1/ECOGAN(imb_FashionMNIST_512):v0', type='model')
         artifact = api.artifact(name=f'sinaenjuni/MYTEST1/model-3r7a3cr2:v0', type='model')
         artifact_dir = artifact.download()
