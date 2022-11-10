@@ -11,7 +11,7 @@ from argparse import ArgumentParser
 from metric.img_metrics import Fid_and_is
 import wandb
 from pathlib import Path
-from utils.misc import str2boolß
+from utils.misc import str2bool
 
 
 class GAN(pl.LightningModule):
