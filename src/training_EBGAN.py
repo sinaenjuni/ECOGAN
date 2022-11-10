@@ -2,7 +2,7 @@ import torch
 import torch.nn.functional as F
 import pytorch_lightning as pl
 from torch.optim import Adam
-
+from torchvision.utils import make_grid
 from utils.dataset import DataModule_
 from pytorch_lightning.loggers import WandbLogger
 import numpy as np
@@ -24,9 +24,12 @@ class GAN(pl.LightningModule):
         self.img_dim = img_dim
         self.latent_dim = latent_dim
         self.best_fid = float('inf')
+
         self.img_metric = Fid_and_is()
         self.G = Generator(img_dim=img_dim, latent_dim=latent_dim, num_classes=num_classes)
         self.D = Discriminator(img_dim=img_dim, latent_dim=latent_dim, num_classes=num_classes)
+        self.vis_z = torch.randn(100, latent_dim)
+        self.vis_label = torch.arange(0, 10).repeat(10)
     def on_load_checkpoint(self, checkpoint):
         self.G.decoder.load_state_dict(checkpoint['decoder'])
         self.G.embedding.load_state_dict(checkpoint['embedding'])
@@ -38,6 +41,7 @@ class GAN(pl.LightningModule):
         batch_size = real_imgs.size(0)
 
         if optimizer_idx == 0:
+            print(self.global_step, "D", batch_size)
             z = torch.randn(batch_size, self.latent_dim).to(self.device)
             fake_labels = (torch.rand((batch_size,)) * 10).to(torch.long).to(self.device)
             wrong_labels = (torch.rand((batch_size,)) * 10).to(torch.long).to(self.device)
@@ -55,6 +59,7 @@ class GAN(pl.LightningModule):
             return d_loss
 
         if optimizer_idx == 1:
+            print(self.global_step, "G", batch_size)
             z = torch.randn(real_imgs.size(0), self.latent_dim).to(self.device)
             fake_labels = (torch.rand((batch_size,)) * 10).to(torch.long).to(self.device)
 
@@ -116,7 +121,7 @@ class GAN(pl.LightningModule):
 
         if self.best_fid > fid_score:
             self.best_fid = fid_score
-            self.logger.log_metrics({'best/epoch': self.current_epoch + 1})
+            self.logger.log_metrics({'best/epoch': self.current_epoch})
             self.logger.log_metrics({'best/step': self.global_step})
             self.logger.log_metrics({'best/fid': fid_score})
             self.logger.log_metrics({'best/ins': ins_score})
@@ -136,7 +141,9 @@ class GAN(pl.LightningModule):
         # label = torch.arange(0, 10, dtype=torch.long).repeat(10).to(self.device)
         # gened_imgs = self(z, label)
         # self.logger.log_image("img", [gened_imgs], self.trainer.current_epoch)
-
+        vis_img = self(self.vis_z.to(self.device), self.vis_label.to(self.device))
+        grid = make_grid(vis_img, normalize=True, nrow=10)
+        self.logger.log_image('vis_image', [grid], self.global_step)
 
     def configure_optimizers(self):
         optimizer_g = Adam(self.G.parameters(), lr=self.lr, betas=self.betas)
@@ -144,20 +151,14 @@ class GAN(pl.LightningModule):
 
         return [{'optimizer': optimizer_d, 'frequency': 5},
                 {'optimizer': optimizer_g, 'frequency': 1}]
-
-
     def mes_loss(self, y_hat, y):
         return F.mse_loss(y_hat, y)
-
-
     def d_loss(self, real_logits, fake_logits, wrong_logits):
         real_loss = F.binary_cross_entropy_with_logits(real_logits, torch.ones_like(real_logits))
         fake_loss = F.binary_cross_entropy_with_logits(fake_logits, torch.zeros_like(fake_logits))
         wrong_loss = F.binary_cross_entropy_with_logits(wrong_logits, torch.zeros_like(wrong_logits))
 
         return real_loss + fake_loss + wrong_loss
-
-
     def compute_gradient_penalty(self, real_samples, fake_samples, real_labels):
         # real_samples = real_samples.reshape(real_samples.size(0), 1, 28, 28).to(device)
         # fake_samples = fake_samples.reshape(fake_samples.size(0), 1, 28, 28).to(device)
@@ -188,8 +189,6 @@ class GAN(pl.LightningModule):
         gradients2L2norm = torch.sqrt(torch.sum(gradients ** 2, dim=1))
         gradient_penalty = torch.mean(( gradients2L2norm - 1 ) ** 2)
         return gradient_penalty
-
-
     def g_loss(self, fake_logits):
         fake_loss = F.binary_cross_entropy_with_logits(fake_logits, torch.ones_like(fake_logits))
         return fake_loss
@@ -213,27 +212,31 @@ if __name__ == "__main__":
     # output = le(z, label)
 
     parser = ArgumentParser()
-    parser.add_argument("--num_classes", type=int, default=10, required=False)
+    parser.add_argument("--latent_dim", type=int, default=128, required=False)
     parser.add_argument("--lr", type=float, default=0.0002, required=False)
     parser.add_argument("--betas", type=tuple, default=(0.5, 0.9), required=False)
-    parser.add_argument("--img_dim", type=int, default=1, required=False)
-    parser.add_argument("--latent_dim", type=int, default=128, required=False)
-    parser.add_argument("--batch_size", type=int, default=128, required=False)
+    parser.add_argument("--num_classes", type=int, default=10, required=False)
+    parser.add_argument("--pre_trained", type=str2bool, default='false', required=False)
     parser.add_argument("--gpus", nargs='+', type=int, default=7, required=False)
-    parser.add_argument("--pre_trained", type=str2bool, default=True, required=True)
+
     parser.add_argument("--data_name", type=str, default='imb_FashionMNIST',
                         choices=['imb_CIFAR10', 'imb_MNIST', 'imb_FashionMNIST'], required=False)
+    parser.add_argument("--img_size", type=int, default=64, required=False)
+    parser.add_argument("--img_dim", type=int, default=1, required=False)
+    parser.add_argument("--is_sampling", type=str2bool, default='false', required=False)
+    parser.add_argument("--batch_size", type=int, default=128, required=False)
 
     args = parser.parse_args()
     dm = DataModule_.from_argparse_args(args)
     model = GAN(**vars(args))
 
-    api = wandb.Api()
-    artifact = api.artifact(name=f'sinaenjuni/EBGAN-AE/{args.data_name}:v0', type='model')
-    # artifact = api.artifact(name=f'sinaenjuni/EBGAN-AE/imb_CIFAR10:v0', type='model')
-    artifact_dir = artifact.download()
-    ch = torch.load(Path(artifact_dir) / "model.ckpt")
-    model.on_load_checkpoint(ch)
+    if args.pre_trained:
+        api = wandb.Api()
+        artifact = api.artifact(name=f'sinaenjuni/EBGAN-AE/{args.data_name}:v0', type='model')
+        # artifact = api.artifact(name=f'sinaenjuni/EBGAN-AE/imb_CIFAR10:v0', type='model')
+        artifact_dir = artifact.download()
+        ch = torch.load(Path(artifact_dir) / "model.ckpt")
+        model.on_load_checkpoint(ch)
 
     # dm = DataModule_(path_train='ß/home/dblab/sin/save_files/refer/ebgan_cifar10', batch_size=128)
     # dm = DataModule_(path_train='/home/dblab/git/PyTorch-StudioGAN/data/imb_cifar10/train', batch_size=128, num_workers=4)
@@ -241,13 +244,15 @@ if __name__ == "__main__":
     # wandb.login(key='6afc6fd83ea84bf316238272eb71ef5a18efd445')
     # wandb.init(project='MYGAN', name='BEGAN-GAN')
 
-    wandb_logger = WandbLogger(project='MYTEST1', name=f'BEGAN-GAN', log_model=True)
+    wandb_logger = WandbLogger(project='MYTEST0', name=f'EBGAN', log_model=True)
     wandb.define_metric('fid', summary='min')
 
     trainer = pl.Trainer.from_argparse_args(args,
+        # limit_train_batches = 1,
+        # limit_val_batches = 1,
         fast_dev_run=False,
         default_root_dir='/shared_hdd/sin/save_files/EBGAN/',
-        max_epochs=100,
+        max_epochs=1,
         # callbacks=[EarlyStopping(monitor='val_loss')],
         callbacks=[pl.callbacks.ModelCheckpoint(filename="EBGAN-{epoch:02d}-{fid}",
                                                 monitor="fid", mode='min')],

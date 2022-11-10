@@ -37,7 +37,8 @@ class DataModule_(pl.LightningDataModule):
         self.pin_memory = pin_memory
 
     def setup(self, stage):
-        self.dataset_train = ImageFolder(self.path_train, transform=self.transforms)
+        # self.dataset_train = ImageFolder(self.path_train, transform=self.transforms)
+        self.dataset_train = MyImageFolderDataset(self.path_train, transform=self.transforms)
         if self.is_sampling:
             unique, counts = np.unique(self.dataset_train.targets, return_counts=True)
             n_sample = len(self.dataset_train.targets)
@@ -137,13 +138,51 @@ class MergeDataset(Dataset):
         label = self.targets[idx]
         return img, label
 
+class MyImageFolderDataset(Dataset):
+    def __init__(self, path, batch_size=128, steps=2000, transform=None):
+        self.path = Path(path)
+        self.images = []
+        self.targets = []
+        self.batch_size = batch_size
+        self.steps = steps
 
+        self.get_data()
+        self.transform = transform
+        self.num_ori = len(self.images)
+    def get_data(self):
+        for img_path in self.path.glob("*/*.JPEG"):
+            self.images.append(img_path)
+            self.targets.append(int(img_path.parts[-2][-1]))
+        for img_path in self.path.glob("*/*.png"):
+            self.images.append(img_path)
+            self.targets.append(int(img_path.parts[-2][-1]))
+
+    def __len__(self):
+        return self.batch_size * 6 * self.steps
+
+    def __getitem__(self, idx):
+        idx = idx % self.num_ori
+        image = Image.open(self.images[idx])
+        target = self.targets[idx]
+        if self.transform is not None:
+            image = self.transform(image)
+
+        return image, target
+
+# dataset = MyImageFolderDataset(paths_train['imb_CIFAR10'], transform=Compose([ToTensor(), Normalize(0.5, 0.5)]))
+# loader = DataLoader(dataset, batch_size=128)
+#
+# for idx, (image, label) in enumerate(loader):
+#     print(idx, label.size())
 
 
 if __name__ == "__main__":
     dm = DataModule_(data_name='imb_CIFAR10', is_sampling=False, img_size = 64, img_dim=3)
     dm.setup('fit')
     np.unique(dm.dataset_train.targets, return_counts=True)
+
+    for i, (img, label) in enumerate(dm.train_dataloader()):
+        print(i, label.size())
 
     dm = DataModule_(data_name='imb_MNIST', is_sampling=False, img_size = 64, img_dim=1)
     dm.setup('fit')
