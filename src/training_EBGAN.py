@@ -22,6 +22,7 @@ class GAN(pl.LightningModule):
         self.betas = betas
         self.img_dim = img_dim
         self.latent_dim = latent_dim
+        self.best_fid = float('inf')
         self.img_metric = Fid_and_is()
         self.G = Generator(img_dim=img_dim, latent_dim=latent_dim, num_classes=num_classes)
         self.D = Discriminator(img_dim=img_dim, latent_dim=latent_dim, num_classes=num_classes)
@@ -118,6 +119,9 @@ class GAN(pl.LightningModule):
         # fid_score = self.fid.compute()
         ins_score = self.img_metric.compute_ins()[0]
         fid_score = self.img_metric.compute_fid()
+
+        if self.best_fid > fid_score:
+            self.
 
         # print('ins_score', ins_score)
         # print('fid_score', fid_score)

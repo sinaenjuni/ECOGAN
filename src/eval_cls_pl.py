@@ -4,25 +4,14 @@
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-import torchvision.datasets
-# from torchvision.transforms import Compose, Normalize, ToTensor, Resize
-from torchvision.datasets import ImageFolder
-# from torch.utils.data import DataLoader, Dataset
 from torchvision.models import resnet18
 from torch.optim import Adam, SGD
-# from tqdm import tqdm
 from torchmetrics import ConfusionMatrix
-# import numpy as np
-# from pathlib import Path
-# from PIL import Image
-# from utils import MergeDataset
 
 from argparse import ArgumentParser
 import pytorch_lightning as pl
 from pytorch_lightning.loggers import WandbLogger
-import wandb
 from utils.dataset import DataModule_, Eval_gen_cls_dataset
-from pathlib import Path
 
 
 # ori_imb_data_path = "/home/dblab/git/PyTorch-StudioGAN/data/imb_cifar10/train"
@@ -63,13 +52,13 @@ from pathlib import Path
 #
 
 
-paths_train = {'imb_CIFAR10': '/home/dblab/git/PyTorch-StudioGAN/data/imb_cifar10/train',
-               'imb_MNIST': '/home/shared_hdd/shared_hdd/sin/save_files/imb_MNIST/train',
-               'imb_FashionMNIST': '/home/shared_hdd/shared_hdd/sin/save_files/imb_FashionMNIST/train'}
-
-paths_test = {'imb_CIFAR10': '/home/dblab/git/PyTorch-StudioGAN/data/imb_cifar10/val',
-              'imb_MNIST': '/home/shared_hdd/shared_hdd/sin/save_files/imb_MNIST/val',
-              'imb_FashionMNIST': '/home/shared_hdd/shared_hdd/sin/save_files/imb_FashionMNIST/val'}
+# paths_train = {'imb_CIFAR10': '/home/dblab/git/PyTorch-StudioGAN/data/imb_cifar10/train',
+#                'imb_MNIST': '/home/shared_hdd/shared_hdd/sin/save_files/imb_MNIST/train',
+#                'imb_FashionMNIST': '/home/shared_hdd/shared_hdd/sin/save_files/imb_FashionMNIST/train'}
+#
+# paths_test = {'imb_CIFAR10': '/home/dblab/git/PyTorch-StudioGAN/data/imb_cifar10/val',
+#               'imb_MNIST': '/home/shared_hdd/shared_hdd/sin/save_files/imb_MNIST/val',
+#               'imb_FashionMNIST': '/home/shared_hdd/shared_hdd/sin/save_files/imb_FashionMNIST/val'}
 
 
 class Eval_cls_model(pl.LightningModule):
@@ -80,7 +69,8 @@ class Eval_cls_model(pl.LightningModule):
         self.lr = lr
         self.model = resnet18(pretrained=False, num_classes=num_classes)
         self.model.conv1 = nn.Conv2d(img_dim, 64, kernel_size=7, stride=2, padding=3, bias=False)
-        self.conf = ConfusionMatrix(num_classes=num_classes)
+        self.conf_train = ConfusionMatrix(num_classes=num_classes)
+        self.conf_val = ConfusionMatrix(num_classes=num_classes)
         self.best_acc = 0
 
     def forward(self, x):
@@ -90,40 +80,43 @@ class Eval_cls_model(pl.LightningModule):
         img, label = batch
         logit = self(img)
         loss = self.ce_loss(logit, label)
+        print(self.conf_train.confmat.sum())
+        self.conf_train.update(preds=logit.argmax(1), target=label)
+        # cm = self.conf.compute()
+        # acc = cm.trace() / cm.sum()
+        # acc_per_cls = cm.diagonal() / cm.sum(1)
 
-        self.conf.update(preds=logit.argmax(1), target=label)
-        cm = self.conf.compute()
+        # log_dict = {'train/acc': acc}
+        # log_dict.update({f'train/acc_cls{idx}': acc_ for idx, acc_ in enumerate(acc_per_cls)})
+        # self.log_dict(log_dict, prog_bar=True, logger=True, on_step=False, on_epoch=True)
+        self.log('train/loss', loss, prog_bar=True, logger=True, on_step=False, on_epoch=True)
+        return {'loss': loss}
+
+    def training_epoch_end(self, outputs):
+        cm = self.conf_train.compute()
         acc = cm.trace() / cm.sum()
         acc_per_cls = cm.diagonal() / cm.sum(1)
 
         log_dict = {'train/acc': acc}
-        log_dict.update({f'train/acc_cls{idx}':acc_ for idx, acc_ in enumerate(acc_per_cls)})
-        self.log_dict(log_dict, prog_bar=False, logger=True, on_step=False, on_epoch=True)
-        self.log('train/loss', loss, prog_bar=True, logger=True, on_step=False, on_epoch=True)
-        return {'loss': loss}
-
-    # def training_epoch_end(self, outputs):
-    #     cm = self.conf.compute()
-    #     acc = cm.trace() / cm.sum()
-    #     acc_per_cls = cm.diagonal() / cm.sum(1)
-    #     self.log_dict({'train/acc': acc,
-    #                    'train/acc_per_cls': acc_per_cls},
-    #                   prog_bar=True, logger=True, on_step=True, on_epoch=False)
+        log_dict.update({f'train/acc_cls{idx}': acc_ for idx, acc_ in enumerate(acc_per_cls)})
+        self.log_dict(log_dict,
+                      prog_bar=True, logger=True, on_step=False, on_epoch=True)
 
     def validation_step(self, batch, batch_idx):
         img, label = batch
         logit = self(img)
         loss = self.ce_loss(logit, label)
+        print(self.conf_val.confmat.sum())
 
-        self.conf.update(preds=logit.argmax(1), target=label)
+        self.conf_val.update(preds=logit.argmax(1), target=label)
         self.log('val/loss', loss, prog_bar=True, logger=True, on_step=False, on_epoch=True)
-        return {'loss': loss, 'logit':logit}
+        return {'loss': loss}
 
     def validation_epoch_end(self, outputs):
-        loss = torch.stack([output['loss'] for output in outputs])
-        logit = torch.cat([output['logit'] for output in outputs])
+        # loss = torch.stack([output['loss'] for output in outputs])
+        # logit = torch.cat([output['logit'] for output in outputs])
 
-        cm = self.conf.compute()
+        cm = self.conf_val.compute()
         acc = cm.trace() / cm.sum()
         acc_per_cls = cm.diagonal() / cm.sum(1)
 
@@ -163,14 +156,15 @@ class Eval_cls_model(pl.LightningModule):
 parser = ArgumentParser()
 # parser.add_argument("--gen_path", type=str, required=True)
 parser.add_argument("--num_classes", type=int, default=10, required=False)
-parser.add_argument("--max_epochs", type=int, default=100, required=False)
+parser.add_argument("--max_epochs", type=int, default=2, required=False)
+# parser.add_argument("--max_steps", type=int, default=1000, required=False)
 parser.add_argument("--lr", type=float, default=0.01, required=False)
 parser.add_argument("--img_size", type=int, default=32, required=False)
 parser.add_argument("--is_sampling", type=bool, default=False, required=False)
 parser.add_argument("--img_dim", type=int, default=3, required=False)
 parser.add_argument("--data_name", type=str, default='imb_CIFAR10',
                     choices=['imb_CIFAR10', 'imb_MNIST', 'imb_FashionMNIST'], required=False)
-
+parser.add_argument("--gpus", nargs='+', type=int, default=7, required=False)
 
 args = parser.parse_args()
 # dm = Eval_gen_cls_dataset.from_argparse_args(args)
@@ -192,8 +186,9 @@ trainer = pl.Trainer.from_argparse_args(args,
     # strategy='ddp',
     strategy='ddp_find_unused_parameters_false',
     accelerator='gpu',
-    gpus=[6, 7],
-    num_sanity_val_steps=0
+    # gpus=[6, 7],
+    # num_sanity_val_steps=0
+
 )
 trainer.fit(model, datamodule=dm)
 

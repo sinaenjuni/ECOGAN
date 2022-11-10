@@ -7,22 +7,23 @@ import numpy as np
 from pathlib import Path
 from PIL import Image
 
+paths_train = {'imb_CIFAR10': '/home/dblab/git/PyTorch-StudioGAN/data/imb_cifar10/train',
+               'imb_MNIST': '/home/shared_hdd/shared_hdd/sin/save_files/imb_MNIST/train',
+               'imb_FashionMNIST': '/home/shared_hdd/shared_hdd/sin/save_files/imb_FashionMNIST/train'}
+paths_test = {'imb_CIFAR10': '/home/dblab/git/PyTorch-StudioGAN/data/imb_cifar10/val',
+              'imb_MNIST': '/home/shared_hdd/shared_hdd/sin/save_files/imb_MNIST/val',
+              'imb_FashionMNIST': '/home/shared_hdd/shared_hdd/sin/save_files/imb_FashionMNIST/val'}
+img_dims = {'imb_CIFAR10': 3, 'imb_MNIST': 1, 'imb_FashionMNIST': 1}
+
 
 class DataModule_(pl.LightningDataModule):
     def __init__(self, data_name, img_size, img_dim, is_sampling, batch_size=128, num_workers=4, pin_memory=True):
         super(DataModule_, self).__init__()
         self.batch_size = batch_size
 
-        paths_train = {'imb_CIFAR10': '/home/dblab/git/PyTorch-StudioGAN/data/imb_cifar10/train',
-                       'imb_MNIST': '/home/shared_hdd/shared_hdd/sin/save_files/imb_MNIST/train',
-                       'imb_FashionMNIST': '/home/shared_hdd/shared_hdd/sin/save_files/imb_FashionMNIST/train'}
-        paths_test = {'imb_CIFAR10': '/home/dblab/git/PyTorch-StudioGAN/data/imb_cifar10/val',
-                      'imb_MNIST': '/home/shared_hdd/shared_hdd/sin/save_files/imb_MNIST/val',
-                      'imb_FashionMNIST': '/home/shared_hdd/shared_hdd/sin/save_files/imb_FashionMNIST/val'}
-
+        self.data_name = data_name
         self.img_size = img_size
         self.img_dim = img_dim
-        self.data_name = data_name
         self.is_sampling = is_sampling
         self.path_train = paths_train[self.data_name]
         self.path_test = paths_test[self.data_name]
@@ -37,8 +38,6 @@ class DataModule_(pl.LightningDataModule):
 
     def setup(self, stage):
         self.dataset_train = ImageFolder(self.path_train, transform=self.transforms)
-        self.dataset_test = ImageFolder(self.path_test, transform=self.transforms)
-
         if self.is_sampling:
             unique, counts = np.unique(self.dataset_train.targets, return_counts=True)
             n_sample = len(self.dataset_train.targets)
@@ -46,6 +45,7 @@ class DataModule_(pl.LightningDataModule):
             weights = [weight[label] for label in self.dataset_train.targets]
             self.sampler = WeightedRandomSampler(weights, 5000)
 
+        self.dataset_val = ImageFolder(self.path_test, transform=self.transforms)
 
 
     def train_dataloader(self):
@@ -57,39 +57,28 @@ class DataModule_(pl.LightningDataModule):
                           pin_memory=True)
 
     def val_dataloader(self):
-        return DataLoader(self.dataset_test,
+        return DataLoader(self.dataset_val,
                           batch_size=self.batch_size,
                           shuffle=False,
                           num_workers=self.num_workers,
                           pin_memory=True)
-    #
-    # def test_dataloader(self):
-    #     return DataLoader(self.valid_dataset, batch_size=self.batch_size)
-
 
 class Eval_gen_cls_dataset(pl.LightningDataModule):
     def __init__(self, gen_path, img_size, batch_size=128, num_workers=4, pin_memory=True, *args, **kwargs):
         super(Eval_gen_cls_dataset, self).__init__()
 
         data_names = ['imb_CIFAR10', 'imb_MNIST', 'imb_FashionMNIST']
-        self.img_dims = {'imb_CIFAR10':3, 'imb_MNIST':1, 'imb_FashionMNIST':1}
         self.sel_name = [data_name for data_name in data_names if data_name in str(gen_path)][0]
 
-        self.paths_train = {'imb_CIFAR10': '/home/dblab/git/PyTorch-StudioGAN/data/imb_cifar10/train',
-                       'imb_MNIST': '/home/shared_hdd/shared_hdd/sin/save_files/imb_MNIST/train',
-                       'imb_FashionMNIST': '/home/shared_hdd/shared_hdd/sin/save_files/imb_FashionMNIST/train'}
-        self.paths_test = {'imb_CIFAR10': '/home/dblab/git/PyTorch-StudioGAN/data/imb_cifar10/val',
-                      'imb_MNIST': '/home/shared_hdd/shared_hdd/sin/save_files/imb_MNIST/val',
-                      'imb_FashionMNIST': '/home/shared_hdd/shared_hdd/sin/save_files/imb_FashionMNIST/val'}
 
         self.data = []
         self.targets = []
         self.batch_size = batch_size
         self.img_size = img_size
-        self.img_dim = self.img_dims[self.sel_name]
-        self.path_train0 = self.paths_train[self.sel_name]
+        self.img_dim = img_dims[self.sel_name]
+        self.path_train0 = paths_train[self.sel_name]
         self.path_train1 = gen_path
-        self.path_test = self.paths_test[self.sel_name]
+        self.path_test = paths_test[self.sel_name]
 
         self.transforms = Compose([ToTensor(),
                                    Grayscale() if self.img_dim == 1 else Lambda(lambda x: x),
