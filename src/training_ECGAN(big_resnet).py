@@ -10,19 +10,10 @@ import numpy as np
 from big_resnet import Generator, Discriminator
 from utils.losses import ExhustiveContrastiveLoss
 from utils.losses import ConditionalContrastiveLoss
-from argparse import ArgumentParser, ArgumentTypeError
+from argparse import ArgumentParser
+from utils.misc import str2bool
 from metric.img_metrics import Fid_and_is
 import wandb
-
-def str2bool(v):
-    if isinstance(v, bool):
-       return v
-    if v.lower() in ('yes', 'true', 't', 'y', '1'):
-        return True
-    elif v.lower() in ('no', 'false', 'f', 'n', '0'):
-        return False
-    else:
-        raise ArgumentTypeError('Boolean value expected.')
 
 
 class GAN(pl.LightningModule):

@@ -11,6 +11,7 @@ from argparse import ArgumentParser
 from metric.img_metrics import Fid_and_is
 import wandb
 from pathlib import Path
+from utils.misc import str2boolß
 
 
 class GAN(pl.LightningModule):
@@ -26,17 +27,12 @@ class GAN(pl.LightningModule):
         self.img_metric = Fid_and_is()
         self.G = Generator(img_dim=img_dim, latent_dim=latent_dim, num_classes=num_classes)
         self.D = Discriminator(img_dim=img_dim, latent_dim=latent_dim, num_classes=num_classes)
-
-
     def on_load_checkpoint(self, checkpoint):
         self.G.decoder.load_state_dict(checkpoint['decoder'])
         self.G.embedding.load_state_dict(checkpoint['embedding'])
         self.D.encoder.load_state_dict(checkpoint['encoder'])
-
-
     def forward(self, z, label):
         return self.G(z, label)
-
     def training_step(self, batch, batch_idx, optimizer_idx):
         real_imgs, real_labels = batch
         batch_size = real_imgs.size(0)
@@ -68,8 +64,6 @@ class GAN(pl.LightningModule):
 
             self.log('g_loss', g_loss, prog_bar=True, logger=True, on_epoch=True, on_step=False)
             return g_loss
-
-
     def validation_step(self, batch, batch_idx):
         real_imgs, labels = batch
         if self.current_epoch == 0:
@@ -121,7 +115,11 @@ class GAN(pl.LightningModule):
         fid_score = self.img_metric.compute_fid()
 
         if self.best_fid > fid_score:
-            self.
+            self.best_fid = fid_score
+            self.logger.log_metrics({'best/epoch': self.current_epoch + 1})
+            self.logger.log_metrics({'best/step': self.global_step})
+            self.logger.log_metrics({'best/fid': fid_score})
+            self.logger.log_metrics({'best/ins': ins_score})
 
         # print('ins_score', ins_score)
         # print('fid_score', fid_score)
@@ -222,6 +220,7 @@ if __name__ == "__main__":
     parser.add_argument("--latent_dim", type=int, default=128, required=False)
     parser.add_argument("--batch_size", type=int, default=128, required=False)
     parser.add_argument("--gpus", nargs='+', type=int, default=7, required=False)
+    parser.add_argument("--pre_trained", type=str2bool, default=True, required=True)
     parser.add_argument("--data_name", type=str, default='imb_FashionMNIST',
                         choices=['imb_CIFAR10', 'imb_MNIST', 'imb_FashionMNIST'], required=False)
 
@@ -242,7 +241,7 @@ if __name__ == "__main__":
     # wandb.login(key='6afc6fd83ea84bf316238272eb71ef5a18efd445')
     # wandb.init(project='MYGAN', name='BEGAN-GAN')
 
-    wandb_logger = WandbLogger(project='MYTEST1', name=f'BEGAN-GAN(pre-trained_{args.data_name})', log_model=True)
+    wandb_logger = WandbLogger(project='MYTEST1', name=f'BEGAN-GAN', log_model=True)
     wandb.define_metric('fid', summary='min')
 
     trainer = pl.Trainer.from_argparse_args(args,

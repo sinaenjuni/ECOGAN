@@ -6,13 +6,13 @@ import torch.nn as nn
 import torch.nn.functional as F
 from torchvision.models import resnet18
 from torch.optim import Adam, SGD
-from torchmetrics import ConfusionMatrix
 
 from argparse import ArgumentParser
 import pytorch_lightning as pl
 from pytorch_lightning.loggers import WandbLogger
 from utils.dataset import DataModule_, Eval_gen_cls_dataset
-
+from utils.confusion_matrix import ConfusionMatrix
+# from torchmetrics import ConfusionMatrix
 
 # ori_imb_data_path = "/home/dblab/git/PyTorch-StudioGAN/data/imb_cifar10/train"
 # # paths = {"EBGAN_gened_data_path" : "/home/dblab/git/EBGAN/save_files/EBGAN_restore_data",
@@ -69,20 +69,17 @@ class Eval_cls_model(pl.LightningModule):
         self.lr = lr
         self.model = resnet18(pretrained=False, num_classes=num_classes)
         self.model.conv1 = nn.Conv2d(img_dim, 64, kernel_size=7, stride=2, padding=3, bias=False)
-        self.conf_train = ConfusionMatrix(num_classes=num_classes)
-        self.conf_val = ConfusionMatrix(num_classes=num_classes)
+        self.cm_train = ConfusionMatrix(num_classes=num_classes)
+        self.cm_val = ConfusionMatrix(num_classes=num_classes)
         self.best_acc = 0
-
     def forward(self, x):
         return self.model(x)
-
     def training_step(self, batch):
         img, label = batch
         logit = self(img)
         loss = self.ce_loss(logit, label)
-        print(self.conf_train.confmat.sum())
-        self.conf_train.update(preds=logit.argmax(1), target=label)
-        # cm = self.conf.compute()
+        self.cm_train.update(target=label.cpu().numpy(), pred=logit.argmax(1).cpu().numpy())
+        # cm = self.cm.compute()
         # acc = cm.trace() / cm.sum()
         # acc_per_cls = cm.diagonal() / cm.sum(1)
 
@@ -91,37 +88,27 @@ class Eval_cls_model(pl.LightningModule):
         # self.log_dict(log_dict, prog_bar=True, logger=True, on_step=False, on_epoch=True)
         self.log('train/loss', loss, prog_bar=True, logger=True, on_step=False, on_epoch=True)
         return {'loss': loss}
-
     def training_epoch_end(self, outputs):
-        cm = self.conf_train.compute()
-        acc = cm.trace() / cm.sum()
-        acc_per_cls = cm.diagonal() / cm.sum(1)
-
+        acc = self.cm_train.getAccuracy()
+        acc_per_cls = self.cm_train.getAccuracyPerClass()
         log_dict = {'train/acc': acc}
         log_dict.update({f'train/acc_cls{idx}': acc_ for idx, acc_ in enumerate(acc_per_cls)})
         self.log_dict(log_dict,
                       prog_bar=True, logger=True, on_step=False, on_epoch=True)
-
+        self.cm_train.reset()
     def validation_step(self, batch, batch_idx):
         img, label = batch
         logit = self(img)
         loss = self.ce_loss(logit, label)
-        print(self.conf_val.confmat.sum())
-
-        self.conf_val.update(preds=logit.argmax(1), target=label)
+        self.cm_val.update(target=label.cpu().numpy(), pred=logit.argmax(1).cpu().numpy())
         self.log('val/loss', loss, prog_bar=True, logger=True, on_step=False, on_epoch=True)
         return {'loss': loss}
-
     def validation_epoch_end(self, outputs):
-        # loss = torch.stack([output['loss'] for output in outputs])
-        # logit = torch.cat([output['logit'] for output in outputs])
-
-        cm = self.conf_val.compute()
-        acc = cm.trace() / cm.sum()
-        acc_per_cls = cm.diagonal() / cm.sum(1)
-
+        acc = self.cm_val.getAccuracy()
+        acc_per_cls = self.cm_val.getAccuracyPerClass()
         log_dict = {'val/acc': acc}
         log_dict.update({f'val/acc_cls{idx}': acc_ for idx, acc_ in enumerate(acc_per_cls)})
+
         self.log_dict(log_dict, prog_bar=False, logger=True, on_step=False, on_epoch=True)
         if self.best_acc < acc:
             self.best_acc = acc
@@ -129,6 +116,7 @@ class Eval_cls_model(pl.LightningModule):
             self.logger.log_metrics({'best/acc': acc})
             for idx, acc_ in enumerate(acc_per_cls):
                 self.logger.log_metrics({f'best/acc_cls{idx}':acc_})
+        self.cm_val.reset()
 
     def ce_loss(self, logit, label):
         return F.cross_entropy(logit, label)
@@ -180,15 +168,14 @@ wandb_logger = WandbLogger(project="eval_cls", name=f"original", log_model=True)
 trainer = pl.Trainer.from_argparse_args(args,
     default_root_dir='/shared_hdd/sin/save_files/cls_tset/',
     # fast_dev_run=True,
-    # max_epochs=200,
+    max_epochs=200,
     # callbacks=[pl.callbacks.ModelCheckpoint(monitor="val/acc", mode='max')],
     logger=wandb_logger,
     # strategy='ddp',
     strategy='ddp_find_unused_parameters_false',
     accelerator='gpu',
     # gpus=[6, 7],
-    # num_sanity_val_steps=0
-
+    num_sanity_val_steps=0
 )
 trainer.fit(model, datamodule=dm)
 

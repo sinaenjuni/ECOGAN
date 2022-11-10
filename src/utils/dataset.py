@@ -92,6 +92,7 @@ class Eval_gen_cls_dataset(pl.LightningDataModule):
     def setup(self, stage):
         self.dataset_train = MergeDataset(self.path_train0, self.path_train1, transform=self.transforms)
         self.dataset_test = ImageFolder(self.path_test, transform=self.transforms)
+
     def train_dataloader(self):
         return DataLoader(self.dataset_train,
                           batch_size=self.batch_size,
