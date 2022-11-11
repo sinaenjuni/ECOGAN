@@ -8,12 +8,13 @@ from pathlib import Path
 from PIL import Image
 
 paths_train = {'imb_CIFAR10': '/home/dblab/git/PyTorch-StudioGAN/data/imb_cifar10/train',
-               'imb_MNIST': '/home/shared_hdd/shared_hdd/sin/save_files/imb_MNIST/train',
-               'imb_FashionMNIST': '/home/shared_hdd/shared_hdd/sin/save_files/imb_FashionMNIST/train'}
+               'imb_MNIST': '/shared_hdd/sin/save_files/imb_MNIST/train',
+               'imb_FashionMNIST': '/shared_hdd/sin/save_files/imb_FashionMNIST/train'}
 paths_test = {'imb_CIFAR10': '/home/dblab/git/PyTorch-StudioGAN/data/imb_cifar10/val',
-              'imb_MNIST': '/home/shared_hdd/shared_hdd/sin/save_files/imb_MNIST/val',
-              'imb_FashionMNIST': '/home/shared_hdd/shared_hdd/sin/save_files/imb_FashionMNIST/val'}
+              'imb_MNIST': '/shared_hdd/sin/save_files/imb_MNIST/val',
+              'imb_FashionMNIST': '/shared_hdd/sin/save_files/imb_FashionMNIST/val'}
 img_dims = {'imb_CIFAR10': 3, 'imb_MNIST': 1, 'imb_FashionMNIST': 1}
+IMG_EXTENSIONS = (".jpg", ".jpeg", ".png", ".ppm", ".bmp", ".pgm", ".tif", ".tiff", ".webp")
 
 
 class DataModule_(pl.LightningDataModule):
@@ -28,7 +29,7 @@ class DataModule_(pl.LightningDataModule):
         self.path_train = paths_train[self.data_name]
         self.path_test = paths_test[self.data_name]
         self.transforms = Compose([ToTensor(),
-                                   Grayscale() if self.img_dim == 1 else Lambda(lambda x: x),
+                                   # Grayscale() if self.img_dim == 1 else Lambda(lambda x: x),
                                    Resize(self.img_size),
                                    Normalize(mean=[0.5] * self.img_dim,
                                              std=[0.5] * self.img_dim)
@@ -107,7 +108,6 @@ class Eval_gen_cls_dataset(pl.LightningDataModule):
                           shuffle=False,
                           num_workers=self.num_workers,
                           pin_memory=True)
-
 class MergeDataset(Dataset):
     def __init__(self, path1, path2, transform=None):
         self.path1 = Path(path1)
@@ -137,44 +137,53 @@ class MergeDataset(Dataset):
 
         label = self.targets[idx]
         return img, label
-
 class MyImageFolderDataset(Dataset):
     def __init__(self, path, batch_size=128, steps=2000, transform=None):
         self.path = Path(path)
-        self.images = []
+        self.data = []
         self.targets = []
         self.batch_size = batch_size
         self.steps = steps
-
         self.get_data()
+        self.num_ori = len(self.data)
         self.transform = transform
-        self.num_ori = len(self.images)
     def get_data(self):
-        for img_path in self.path.glob("*/*.JPEG"):
-            self.images.append(img_path)
-            self.targets.append(int(img_path.parts[-2][-1]))
-        for img_path in self.path.glob("*/*.png"):
-            self.images.append(img_path)
-            self.targets.append(int(img_path.parts[-2][-1]))
-
+        for path_img in self.path.glob("*/*"):
+            if path_img.suffix.lower() in IMG_EXTENSIONS:
+                self.data.append(path_img)
+                self.targets.append(int(path_img.parts[-2][-1]))
+        # print(f"Fine number of {len(self.data)}")
     def __len__(self):
         return self.batch_size * 6 * self.steps
-
     def __getitem__(self, idx):
-        idx = idx % self.num_ori
-        image = Image.open(self.images[idx])
+        idx = int(idx % self.num_ori)
+        image = Image.open(self.data[idx])
         target = self.targets[idx]
         if self.transform is not None:
             image = self.transform(image)
-
         return image, target
 
+# img_dim = 3
+# dataset = MyImageFolderDataset(paths_test['imb_CIFAR10'],
+#                                transform=Compose([ToTensor(),
+#                                    Grayscale() if img_dim == 1 else Lambda(lambda x: x),
+                                   # Resize(64),
+                                   # Normalize(mean=[0.5] * img_dim,
+                                   #           std=[0.5] * img_dim)
+                                   #  ]))
+# dataset = MyImageFolderDataset(paths_test['imb_CIFAR10'], transform=Compose([ToTensor(), Normalize(0.5, 0.5)]))
 # dataset = MyImageFolderDataset(paths_train['imb_CIFAR10'], transform=Compose([ToTensor(), Normalize(0.5, 0.5)]))
 # loader = DataLoader(dataset, batch_size=128)
+# loader.dataset.num_ori
+# img, label = iter(loader).next()
+# len(dataset)
+# len(loader)
+# # dataset[1]
 #
+# #
 # for idx, (image, label) in enumerate(loader):
 #     print(idx, label.size())
-
+#
 
 if __name__ == "__main__":
     dm = DataModule_(data_name='imb_CIFAR10', is_sampling=False, img_size = 64, img_dim=3)

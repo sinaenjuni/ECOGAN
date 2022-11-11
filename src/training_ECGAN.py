@@ -2,7 +2,7 @@ import torch
 import torch.nn.functional as F
 import pytorch_lightning as pl
 from torch.optim import Adam
-
+from torchvision.utils import make_grid
 from utils.dataset import DataModule_
 from pytorch_lightning.loggers import WandbLogger
 import numpy as np
@@ -11,6 +11,8 @@ from utils.losses import ExhustiveContrastiveLoss
 from argparse import ArgumentParser
 from metric.img_metrics import Fid_and_is
 import wandb
+from pathlib import Path
+from utils.misc import str2bool
 
 
 class GAN(pl.LightningModule):
@@ -22,12 +24,16 @@ class GAN(pl.LightningModule):
         self.betas = betas
         self.img_dim = img_dim
         self.latent_dim = latent_dim
+        self.best_fid = float('inf')
+
         self.img_metric = Fid_and_is()
         self.G = Generator(img_dim=img_dim, latent_dim=latent_dim, num_classes=num_classes)
         self.D = Discriminator_EC(img_dim=img_dim, latent_dim=latent_dim, num_classes=num_classes, d_embed_dim=d_embed_dim)
 
         self.eco_loss = ExhustiveContrastiveLoss(num_classes=num_classes, temperature=1.0)
 
+        self.vis_z = torch.randn(100, latent_dim)
+        self.vis_label = torch.arange(0, 10).repeat(10)
     def forward(self, z, label):
         return self.G(z, label)
 
@@ -42,7 +48,6 @@ class GAN(pl.LightningModule):
             fake_imgs = self(z, real_labels).detach()
             fake_logits, _, _ = self.D(fake_imgs, fake_labels)
             real_logits, embed_data, embed_label = self.D(real_imgs, real_labels)
-
 
             d_adv_loss = self.d_loss(real_logits, fake_logits)
             d_cond_loss = self.eco_loss(embed_data, embed_label, real_labels)
@@ -104,6 +109,13 @@ class GAN(pl.LightningModule):
 
         ins_score = self.img_metric.compute_ins()[0]
         fid_score = self.img_metric.compute_fid()
+        # print(fid_score)
+        if self.best_fid > fid_score:
+            self.best_fid = fid_score
+            self.logger.log_metrics({'best/epoch': self.current_epoch})
+            self.logger.log_metrics({'best/step': self.global_step})
+            self.logger.log_metrics({'best/fid': fid_score})
+            self.logger.log_metrics({'best/ins': ins_score})
 
         # print('ins_score', ins_score)
         # print('fid_score', fid_score)
@@ -119,7 +131,9 @@ class GAN(pl.LightningModule):
         # label = torch.arange(0, 10, dtype=torch.long).repeat(10).to(self.device)
         # gened_imgs = self(z, label)
         # self.logger.log_image("img", [gened_imgs], self.trainer.current_epoch)
-
+        vis_img = self(self.vis_z.to(self.device), self.vis_label.to(self.device))
+        grid = make_grid(vis_img, normalize=True, nrow=10)
+        self.logger.log_image('vis_image', [grid], self.global_step)
 
     def configure_optimizers(self):
         optimizer_g = Adam(self.G.parameters(), lr=self.lr, betas=self.betas)
@@ -166,7 +180,6 @@ class GAN(pl.LightningModule):
         gradients2L2norm = torch.sqrt(torch.sum(gradients ** 2, dim=1))
         gradient_penalty = torch.mean(( gradients2L2norm - 1 ) ** 2)
         return gradient_penalty
-
 
     def g_loss(self, fake_logits):
         fake_loss = F.binary_cross_entropy_with_logits(fake_logits, torch.ones_like(fake_logits))
@@ -225,12 +238,14 @@ if __name__ == "__main__":
     # wandb.login(key='6afc6fd83ea84bf316238272eb71ef5a18efd445')
     # wandb.init(project='MYGAN', name='BEGAN-GAN')
 
-    wandb_logger = WandbLogger(project='MYTEST1', name=f'ECOGAN', log_model=True)
-    wandb.define_metric('fid', summary='min')
+    wandb_logger = WandbLogger(project='MYTEST0', name=f'ECOGAN', log_model=True)
+    # wandb.define_metric('fid', summary='min')
     trainer = pl.Trainer.from_argparse_args(args,
+        # limit_train_batches = 4,
+        # limit_val_batches = 4,
         fast_dev_run=False,
         default_root_dir='/shared_hdd/sin/save_files/ECOGAN/',
-        max_epochs=100,
+        max_epochs=50,
         # callbacks=[EarlyStopping(monitor='val_loss')],
         callbacks=[pl.callbacks.ModelCheckpoint(filename="ECOGAN-{epoch:02d}-{fid}",
                                                 monitor="fid", mode='min')],
@@ -243,3 +258,4 @@ if __name__ == "__main__":
         num_sanity_val_steps=0
     )
     trainer.fit(model, datamodule=dm)
+

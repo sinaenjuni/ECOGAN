@@ -36,12 +36,12 @@ class GAN(pl.LightningModule):
         self.D.encoder.load_state_dict(checkpoint['encoder'])
     def forward(self, z, label):
         return self.G(z, label)
+
     def training_step(self, batch, batch_idx, optimizer_idx):
         real_imgs, real_labels = batch
         batch_size = real_imgs.size(0)
 
         if optimizer_idx == 0:
-            print(self.global_step, "D", batch_size)
             z = torch.randn(batch_size, self.latent_dim).to(self.device)
             fake_labels = (torch.rand((batch_size,)) * 10).to(torch.long).to(self.device)
             wrong_labels = (torch.rand((batch_size,)) * 10).to(torch.long).to(self.device)
@@ -59,7 +59,7 @@ class GAN(pl.LightningModule):
             return d_loss
 
         if optimizer_idx == 1:
-            print(self.global_step, "G", batch_size)
+            # print(self.global_step, "G", batch_size)
             z = torch.randn(real_imgs.size(0), self.latent_dim).to(self.device)
             fake_labels = (torch.rand((batch_size,)) * 10).to(torch.long).to(self.device)
 
@@ -69,6 +69,8 @@ class GAN(pl.LightningModule):
 
             self.log('g_loss', g_loss, prog_bar=True, logger=True, on_epoch=True, on_step=False)
             return g_loss
+
+
     def validation_step(self, batch, batch_idx):
         real_imgs, labels = batch
         if self.current_epoch == 0:
@@ -118,7 +120,7 @@ class GAN(pl.LightningModule):
         # fid_score = self.fid.compute()
         ins_score = self.img_metric.compute_ins()[0]
         fid_score = self.img_metric.compute_fid()
-
+        # print(fid_score)
         if self.best_fid > fid_score:
             self.best_fid = fid_score
             self.logger.log_metrics({'best/epoch': self.current_epoch})
@@ -189,6 +191,7 @@ class GAN(pl.LightningModule):
         gradients2L2norm = torch.sqrt(torch.sum(gradients ** 2, dim=1))
         gradient_penalty = torch.mean(( gradients2L2norm - 1 ) ** 2)
         return gradient_penalty
+
     def g_loss(self, fake_logits):
         fake_loss = F.binary_cross_entropy_with_logits(fake_logits, torch.ones_like(fake_logits))
         return fake_loss
@@ -245,14 +248,13 @@ if __name__ == "__main__":
     # wandb.init(project='MYGAN', name='BEGAN-GAN')
 
     wandb_logger = WandbLogger(project='MYTEST0', name=f'EBGAN', log_model=True)
-    wandb.define_metric('fid', summary='min')
-
+    # wandb.define_metric('fid', summary='min')
     trainer = pl.Trainer.from_argparse_args(args,
-        # limit_train_batches = 1,
-        # limit_val_batches = 1,
+        # limit_train_batches = 4,
+        # limit_val_batches = 4,
         fast_dev_run=False,
         default_root_dir='/shared_hdd/sin/save_files/EBGAN/',
-        max_epochs=1,
+        max_epochs=50,
         # callbacks=[EarlyStopping(monitor='val_loss')],
         callbacks=[pl.callbacks.ModelCheckpoint(filename="EBGAN-{epoch:02d}-{fid}",
                                                 monitor="fid", mode='min')],
@@ -266,8 +268,3 @@ if __name__ == "__main__":
     )
     trainer.fit(model, datamodule=dm)
 
-
-    # img = torch.randn(100, 3, 64, 64)
-    # label = torch.randint(0,10, (100, ))
-    # ae =
-    # output = ae(img, label)
