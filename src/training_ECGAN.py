@@ -14,7 +14,6 @@ import wandb
 from pathlib import Path
 from utils.misc import str2bool
 
-
 class GAN(pl.LightningModule):
     def __init__(self, latent_dim, img_dim, num_classes, lr, betas, d_embed_dim, *args, **kwargs):
         super(GAN, self).__init__()
@@ -245,7 +244,8 @@ if __name__ == "__main__":
         # limit_val_batches = 4,
         fast_dev_run=False,
         default_root_dir='/shared_hdd/sin/save_files/ECOGAN/',
-        max_epochs=50,
+        max_epochs=-1,
+        max_steps=150000,
         # callbacks=[EarlyStopping(monitor='val_loss')],
         callbacks=[pl.callbacks.ModelCheckpoint(filename="ECOGAN-{epoch:02d}-{fid}",
                                                 monitor="fid", mode='min')],
@@ -255,7 +255,8 @@ if __name__ == "__main__":
         accelerator='gpu',
         # gpus=[5],
         check_val_every_n_epoch=1,
-        num_sanity_val_steps=0
-    )
+        num_sanity_val_steps=0,
+        replace_sampler_ddp=False
+        )
     trainer.fit(model, datamodule=dm)
 
