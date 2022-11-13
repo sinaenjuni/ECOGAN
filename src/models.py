@@ -253,6 +253,36 @@ class Discriminator_EC(nn.Module):
         return adv_output, embed_data, embed_label
 
 
+class Discriminator_EC2(nn.Module):
+    def __init__(self, img_dim, latent_dim, num_classes, d_embed_dim):
+        super(Discriminator_EC2, self).__init__()
+
+        self.encoder = Encoder(img_dim, latent_dim)
+        self.linear1 = nn.Linear(in_features=self.encoder.dims[3], out_features=1, bias=True)
+        self.linear2 = nn.Linear(in_features=self.encoder.dims[3], out_features=d_embed_dim, bias=True)
+        self.embedding = nn.Embedding(num_embeddings=num_classes, embedding_dim=d_embed_dim)
+
+        # self.embedding = nn.Sequential(nn.Embedding(num_embeddings=num_classes, embedding_dim=512),
+        #                                nn.Flatten(),
+        #                                nn.Linear(512, 256 * (4 * 4)),
+        #                                nn.LeakyReLU(negative_slope=0.2, inplace=True))
+
+        # self.discriminator = nn.Linear(256 * (4*4), 1)
+
+
+    def forward(self, img, label):
+        x = self.encoder.getFeatures(img)
+        x = torch.sum(x, dim=[2,3])
+        x = torch.flatten(x, 1)
+        adv_output = self.linear1(x)
+
+        embed_data = self.linear2(x)
+        embed_label = self.embedding(label)
+
+        embed_data = F.normalize(embed_data, dim=1)
+        embed_label = F.normalize(embed_label, dim=1)
+
+        return adv_output, embed_data, embed_label
 
 
 

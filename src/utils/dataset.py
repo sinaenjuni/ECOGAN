@@ -192,7 +192,7 @@ class MyImageFolderDataset(Dataset):
 #
 
 
-if __name__ == "__main__":
+# if __name__ == "__main__":
     # dm = DataModule_(data_name='imb_CIFAR10', is_sampling=False, img_size = 64, img_dim=3)
     # dm.setup('fit')
     # np.unique(dm.dataset_train.targets, return_counts=True)
@@ -232,33 +232,33 @@ if __name__ == "__main__":
     #
     # np.unique(np.concatenate(count), return_counts=True)
 
-    import torch.distributed as dist
-    import os
-
-    img_dim = 3
-    dataset = MyImageFolderDataset(paths_train['imb_CIFAR10'],
-                                   transform=Compose([ToTensor(),
-                                                      Resize(64),
-                                                      Normalize(mean=[0.5] * img_dim,
-                                                                std=[0.5] * img_dim)
-                                                      ]))
-
-    unique, counts = np.unique(dataset.targets, return_counts=True)
-    n_sample = len(dataset.targets)
-    weight = [n_sample / count for count in counts]
-    weights = [weight[label] for label in dataset.targets]
-    # sampler = WeightedRandomSampler(weights, 128 * 6 * 2000)
-
-    os.environ['MASTER_ADDR'] = 'localhost'
-    os.environ['MASTER_PORT'] = '12356'
-    dist.init_process_group("gloo", rank=0, world_size=2)
-
-    sampler = DistributedWeightedSampler(dataset=dataset, weights=weights)
-    loader = DataLoader(dataset, batch_size=128, sampler=sampler)
-
-    dist_sm = []
-    from tqdm import tqdm
-    for img, label in tqdm(loader):
-        dist.append(label)
-    dist_sm.append(label)
-    print(np.unique(np.concatenate(dist), return_counts=True))
+    # import torch.distributed as dist
+    # import os
+    #
+    # img_dim = 3
+    # dataset = MyImageFolderDataset(paths_train['imb_CIFAR10'],
+    #                                transform=Compose([ToTensor(),
+    #                                                   Resize(64),
+    #                                                   Normalize(mean=[0.5] * img_dim,
+    #                                                             std=[0.5] * img_dim)
+    #                                                   ]))
+    #
+    # unique, counts = np.unique(dataset.targets, return_counts=True)
+    # n_sample = len(dataset.targets)
+    # weight = [n_sample / count for count in counts]
+    # weights = [weight[label] for label in dataset.targets]
+    # # sampler = WeightedRandomSampler(weights, 128 * 6 * 2000)
+    #
+    # os.environ['MASTER_ADDR'] = 'localhost'
+    # os.environ['MASTER_PORT'] = '12356'
+    # dist.init_process_group("gloo", rank=0, world_size=2)
+    #
+    # sampler = DistributedWeightedSampler(dataset=dataset, weights=weights)
+    # loader = DataLoader(dataset, batch_size=128, sampler=sampler)
+    #
+    # dist_sm = []
+    # from tqdm import tqdm
+    # for img, label in tqdm(loader):
+    #     dist.append(label)
+    # dist_sm.append(label)
+    # print(np.unique(np.concatenate(dist), return_counts=True))

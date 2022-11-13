@@ -266,7 +266,7 @@ if __name__ == "__main__":
         # gpus=[5],
         check_val_every_n_epoch=1,
         num_sanity_val_steps=0,
-        replace_sampler_ddp=False
+        # replace_sampler_ddp=False
     )
     trainer.fit(model, datamodule=dm)
 
