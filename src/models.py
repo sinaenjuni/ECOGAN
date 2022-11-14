@@ -258,8 +258,8 @@ class Discriminator_EC2(nn.Module):
         super(Discriminator_EC2, self).__init__()
 
         self.encoder = Encoder(img_dim, latent_dim)
-        self.linear1 = nn.Linear(in_features=self.encoder.dims[3], out_features=1, bias=True)
-        self.linear2 = nn.Linear(in_features=self.encoder.dims[3], out_features=d_embed_dim, bias=True)
+        self.linear1 = nn.Linear(in_features=self.encoder.dims[3] * (4 * 4), out_features=1, bias=True)
+        self.linear2 = nn.Linear(in_features=self.encoder.dims[3] * (4 * 4), out_features=d_embed_dim, bias=True)
         self.embedding = nn.Embedding(num_embeddings=num_classes, embedding_dim=d_embed_dim)
 
         # self.embedding = nn.Sequential(nn.Embedding(num_embeddings=num_classes, embedding_dim=512),
@@ -272,7 +272,8 @@ class Discriminator_EC2(nn.Module):
 
     def forward(self, img, label):
         x = self.encoder.getFeatures(img)
-        x = torch.sum(x, dim=[2,3])
+        # print(x.flatten(1).size())
+        # x = torch.sum(x, dim=[2,3])
         x = torch.flatten(x, 1)
         adv_output = self.linear1(x)
 
@@ -289,9 +290,9 @@ class Discriminator_EC2(nn.Module):
 if __name__ == '__main__':
     input_tensor = torch.rand(200, 3, 64, 64)
     label = torch.randint(0, 10, (200,))
-    D = Discriminator_EC(3, 128, 10, 256)
+    D = Discriminator_EC2(3, 128, 10, 512)
     adv_output, embed_data, embed_label = D(input_tensor, label)
-
+    print(adv_output.size(), embed_data.size(), embed_label.size())
 
 
 

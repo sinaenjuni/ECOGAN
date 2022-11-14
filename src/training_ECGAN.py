@@ -6,7 +6,7 @@ from torchvision.utils import make_grid
 from utils.dataset import DataModule_
 from pytorch_lightning.loggers import WandbLogger
 import numpy as np
-from models import Generator, Discriminator_EC
+from models import Generator, Discriminator_EC2
 from utils.losses import ExhustiveContrastiveLoss
 from argparse import ArgumentParser
 from metric.img_metrics import Fid_and_is
@@ -27,7 +27,7 @@ class GAN(pl.LightningModule):
 
         self.img_metric = Fid_and_is()
         self.G = Generator(img_dim=img_dim, latent_dim=latent_dim, num_classes=num_classes)
-        self.D = Discriminator_EC(img_dim=img_dim, latent_dim=latent_dim, num_classes=num_classes, d_embed_dim=d_embed_dim)
+        self.D = Discriminator_EC2(img_dim=img_dim, latent_dim=latent_dim, num_classes=num_classes, d_embed_dim=d_embed_dim)
 
         self.eco_loss = ExhustiveContrastiveLoss(num_classes=num_classes, temperature=1.0)
 
@@ -256,7 +256,7 @@ if __name__ == "__main__":
         # gpus=[5],
         check_val_every_n_epoch=1,
         num_sanity_val_steps=0,
-        replace_sampler_ddp=False
+        replace_sampler_ddp=(args.is_sampling == False)
         )
     trainer.fit(model, datamodule=dm)
 
