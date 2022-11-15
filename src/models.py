@@ -228,12 +228,11 @@ class Discriminator_EC(nn.Module):
         self.encoder = Encoder(img_dim, latent_dim)
         self.linear1 = nn.Linear(in_features=self.encoder.dims[3], out_features=1, bias=True)
         self.linear2 = nn.Linear(in_features=self.encoder.dims[3], out_features=d_embed_dim, bias=True)
-        self.embedding = nn.Embedding(num_embeddings=num_classes, embedding_dim=d_embed_dim)
+        # self.embedding = nn.Embedding(num_embeddings=num_classes, embedding_dim=d_embed_dim)
 
-        # self.embedding = nn.Sequential(nn.Embedding(num_embeddings=num_classes, embedding_dim=512),
-        #                                nn.Flatten(),
-        #                                nn.Linear(512, 256 * (4 * 4)),
-        #                                nn.LeakyReLU(negative_slope=0.2, inplace=True))
+        self.embedding = nn.Sequential(nn.Embedding(num_embeddings=num_classes, embedding_dim=d_embed_dim*2),
+                                       nn.LeakyReLU(negative_slope=0.2, inplace=True),
+                                       nn.Linear(d_embed_dim*2, d_embed_dim))
 
         # self.discriminator = nn.Linear(256 * (4*4), 1)
 
@@ -253,44 +252,11 @@ class Discriminator_EC(nn.Module):
         return adv_output, embed_data, embed_label
 
 
-class Discriminator_EC2(nn.Module):
-    def __init__(self, img_dim, latent_dim, num_classes, d_embed_dim):
-        super(Discriminator_EC2, self).__init__()
-
-        self.encoder = Encoder(img_dim, latent_dim)
-        self.linear1 = nn.Linear(in_features=self.encoder.dims[3] * (4 * 4), out_features=1, bias=True)
-        self.linear2 = nn.Linear(in_features=self.encoder.dims[3] * (4 * 4), out_features=d_embed_dim, bias=True)
-        self.embedding = nn.Embedding(num_embeddings=num_classes, embedding_dim=d_embed_dim)
-
-        # self.embedding = nn.Sequential(nn.Embedding(num_embeddings=num_classes, embedding_dim=512),
-        #                                nn.Flatten(),
-        #                                nn.Linear(512, 256 * (4 * 4)),
-        #                                nn.LeakyReLU(negative_slope=0.2, inplace=True))
-
-        # self.discriminator = nn.Linear(256 * (4*4), 1)
-
-
-    def forward(self, img, label):
-        x = self.encoder.getFeatures(img)
-        # print(x.flatten(1).size())
-        # x = torch.sum(x, dim=[2,3])
-        x = torch.flatten(x, 1)
-        adv_output = self.linear1(x)
-
-        embed_data = self.linear2(x)
-        embed_label = self.embedding(label)
-
-        embed_data = F.normalize(embed_data, dim=1)
-        embed_label = F.normalize(embed_label, dim=1)
-
-        return adv_output, embed_data, embed_label
-
-
 
 if __name__ == '__main__':
     input_tensor = torch.rand(200, 3, 64, 64)
     label = torch.randint(0, 10, (200,))
-    D = Discriminator_EC2(3, 128, 10, 512)
+    D = Discriminator_EC(3, 128, 10, 512)
     adv_output, embed_data, embed_label = D(input_tensor, label)
     print(adv_output.size(), embed_data.size(), embed_label.size())
 

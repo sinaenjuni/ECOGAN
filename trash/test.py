@@ -1,5 +1,5 @@
-import torch
-torch.arange(0, 10).repeat(10).view(10,10)
+# import torch
+# torch.arange(0, 10).repeat(10).view(10,10)
 
 
 #
@@ -26,15 +26,37 @@ torch.arange(0, 10).repeat(10).view(10,10)
 # outputs.size()
 # hidden
 #
-dataset = (torch.rand(100) * 10).to(torch.long)
-unique, counts = np.unique(dataset, return_counts=True)
-n_sample = len(dataset)
-weight = [n_sample / count for count in counts]
-weights = [weight[label] for label in dataset]
-sampler = WeightedRandomSampler(weights, 128 * 6 * 2000)
-loader = DataLoader(dataset, batch_size=128, sampler=sampler)
+# dataset = (torch.rand(100) * 10).to(torch.long)
+# unique, counts = np.unique(dataset, return_counts=True)
+# n_sample = len(dataset)
+# weight = [n_sample / count for count in counts]
+# weights = [weight[label] for label in dataset]
+# sampler = WeightedRandomSampler(weights, 128 * 6 * 2000)
+# loader = DataLoader(dataset, batch_size=128, sampler=sampler)
+#
+# torch.multinomial(torch.as_tensor(weights, dtype=torch.double), 2, replacement=True, generator=None).tolist()
+import numpy as np
+from pathlib import Path
+path = list(Path('/shared_hdd/sin/dataset/ImageNet_LT/').glob('*.txt'))
 
-torch.multinomial(torch.as_tensor(weights, dtype=torch.double), 2, replacement=True, generator=None).tolist()
+file = path[3].open()
+print(file)
+dpath, dlabel = zip(*[[row.split(' ')[0], int(row.split(' ')[1])] for row in file.readlines()])
+
+
+path = list(Path('/shared_hdd/sin/dataset/ImageNet_LT/ImageNet_LT_open').glob('*'))
+len(path)
+
+num = np.unique(dlabel, return_counts=True)[1]
+num.sort()
+with open('/shared_hdd/sin/dataset/ImageNet_LT/ImageNet_LT_train.txt', 'r') as f:
+    files = f.readlines()
+
+print(len(files))
+
+
+for i in files:
+    print(i)
 
 
 
