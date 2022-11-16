@@ -228,11 +228,11 @@ class Discriminator_EC(nn.Module):
         self.encoder = Encoder(img_dim, latent_dim)
         self.linear1 = nn.Linear(in_features=self.encoder.dims[3], out_features=1, bias=True)
         self.linear2 = nn.Linear(in_features=self.encoder.dims[3], out_features=d_embed_dim, bias=True)
-        # self.embedding = nn.Embedding(num_embeddings=num_classes, embedding_dim=d_embed_dim)
+        self.embedding = nn.Embedding(num_embeddings=num_classes, embedding_dim=d_embed_dim)
 
-        self.embedding = nn.Sequential(nn.Embedding(num_embeddings=num_classes, embedding_dim=d_embed_dim*2),
-                                       nn.LeakyReLU(negative_slope=0.2, inplace=True),
-                                       nn.Linear(d_embed_dim*2, d_embed_dim))
+        # self.embedding = nn.Sequential(nn.Embedding(num_embeddings=num_classes, embedding_dim=d_embed_dim*2),
+        #                                nn.LeakyReLU(negative_slope=0.2, inplace=True),
+        #                                nn.Linear(d_embed_dim*2, d_embed_dim))
 
         # self.discriminator = nn.Linear(256 * (4*4), 1)
 

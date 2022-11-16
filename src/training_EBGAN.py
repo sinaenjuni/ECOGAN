@@ -3,7 +3,7 @@ import torch.nn.functional as F
 import pytorch_lightning as pl
 from torch.optim import Adam
 from torchvision.utils import make_grid
-from utils.dataset import DataModule_
+from utils.datasets import DataModule_
 from pytorch_lightning.loggers import WandbLogger
 import numpy as np
 from models import Generator, Discriminator
@@ -223,7 +223,7 @@ if __name__ == "__main__":
     parser.add_argument("--gpus", nargs='+', type=int, default=7, required=False)
 
     parser.add_argument("--data_name", type=str, default='imb_FashionMNIST',
-                        choices=['imb_CIFAR10', 'imb_MNIST', 'imb_FashionMNIST'], required=False)
+                        choices=['CIFAR10_LT', 'MNIST_LT', 'FashionMNIST_LT', 'Places_LT'], required=False)
     parser.add_argument("--img_size", type=int, default=64, required=False)
     parser.add_argument("--img_dim", type=int, default=1, required=False)
     parser.add_argument("--is_sampling", type=str2bool, default='false', required=False)
@@ -269,4 +269,6 @@ if __name__ == "__main__":
         # replace_sampler_ddp=False
     )
     trainer.fit(model, datamodule=dm)
+
+
 

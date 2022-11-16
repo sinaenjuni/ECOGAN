@@ -3,7 +3,7 @@ import torch.nn.functional as F
 import pytorch_lightning as pl
 from torch.optim import Adam
 from torchvision.utils import make_grid
-from utils.dataset import DataModule_
+from utils.datasets import DataModule_
 from pytorch_lightning.loggers import WandbLogger
 import numpy as np
 from models import Generator, Discriminator_EC
@@ -218,7 +218,7 @@ if __name__ == "__main__":
     parser.add_argument("--gpus", nargs='+', type=int, default=7, required=False)
     parser.add_argument("--d_embed_dim", type=int, default=512, required=False)
     parser.add_argument("--data_name", type=str, default='imb_FashionMNIST',
-                        choices=['imb_CIFAR10', 'imb_MNIST', 'imb_FashionMNIST'], required=False)
+                        choices=['CIFAR10_LT', 'MNIST_LT', 'FashionMNIST_LT', 'Places_LT'], required=False)
 
     args = parser.parse_args()
     dm = DataModule_.from_argparse_args(args)
