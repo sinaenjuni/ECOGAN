@@ -11,13 +11,13 @@ from tqdm import tqdm
 import importlib
 
 class MyDataset(Dataset):
-    def __init__(self, extention=True, batch_size=128, steps=2000, transform=None):
+    def __init__(self, is_extension:bool, batch_size:int, steps:int, transform=None):
         self.data:list
         self.targets:list
         self.num_ori:int
         self.batch_size:int = batch_size
         self.steps:int = steps
-        self.extention:bool = extention
+        self.is_extension:bool = is_extension
         self.transform = transform
         self.num_classes:int
         self.classes:list
@@ -30,7 +30,7 @@ class MyDataset(Dataset):
         self.num_ori = len(targets)
 
     def __len__(self):
-        if self.extention:
+        if self.is_extension:
             return self.batch_size * 6 * self.steps
         else:
             return self.num_ori
@@ -45,8 +45,8 @@ class MyDataset(Dataset):
         return image, target
 
 class CIFAR10_LT(MyDataset):
-    def __init__(self, is_train=True, extention=True, batch_size=128, steps=2000, transform=None):
-        super(CIFAR10_LT, self).__init__(extention=extention, batch_size=batch_size, steps=steps, transform=transform)
+    def __init__(self, is_train=True, is_extension=True, batch_size=128, steps=2000, transform=None):
+        super(CIFAR10_LT, self).__init__(is_extension=is_extension, batch_size=batch_size, steps=steps, transform=transform)
         if is_train:
             path = '/home/dblab/git/PyTorch-StudioGAN/data/imb_cifar10/train'
         else:
@@ -57,8 +57,8 @@ class CIFAR10_LT(MyDataset):
         self.parse_data_path(data, targets)
 
 class MNIST_LT(MyDataset):
-    def __init__(self, is_train=True, extention=True, batch_size=128, steps=2000, transform=None):
-        super(MNIST_LT, self).__init__(extention=extention, batch_size=batch_size, steps=steps, transform=transform)
+    def __init__(self, is_train=True, is_extension=True, batch_size=128, steps=2000, transform=None):
+        super(MNIST_LT, self).__init__(is_extension=is_extension, batch_size=batch_size, steps=steps, transform=transform)
         if is_train:
             path = '/shared_hdd/sin/save_files/imb_MNIST/train'
         else:
@@ -68,8 +68,8 @@ class MNIST_LT(MyDataset):
         self.parse_data_path(data, targets)
 
 class FashionMNIST_LT(MyDataset):
-    def __init__(self, is_train=True, extention=True, batch_size=128, steps=2000, transform=None):
-        super(FashionMNIST_LT, self).__init__(extention=extention, batch_size=batch_size, steps=steps, transform=transform)
+    def __init__(self, is_train=True, is_extension=True, batch_size=128, steps=2000, transform=None):
+        super(FashionMNIST_LT, self).__init__(is_extension=is_extension, batch_size=batch_size, steps=steps, transform=transform)
         if is_train:
             path = '/shared_hdd/sin/save_files/imb_FashionMNIST/train'
         else:
@@ -79,8 +79,8 @@ class FashionMNIST_LT(MyDataset):
         self.parse_data_path(data, targets)
 
 class Places_LT(MyDataset):
-    def __init__(self, is_train=True, extention=True, batch_size=128, steps=2000, transform=None):
-        super(Places_LT, self).__init__(extention=extention, batch_size=batch_size, steps=steps, transform=transform)
+    def __init__(self, is_train=True, is_extension=True, batch_size=128, steps=2000, transform=None):
+        super(Places_LT, self).__init__(is_extension=is_extension, batch_size=batch_size, steps=steps, transform=transform)
         if is_train:
             base_path = Path('/shared_hdd/sin/dataset/Places/train_256_places365standard')
             with open('/shared_hdd/sin/dataset/Places_LT/Places_LT_train.txt', 'r') as f:
@@ -117,7 +117,16 @@ class Places_LT(MyDataset):
 #     pass
 # img, label = iter(loader).next()
 class DataModule_(pl.LightningDataModule):
-    def __init__(self, data_name, img_size, img_dim, is_sampling, batch_size=128, steps=2000, num_workers=4, pin_memory=True):
+    def __init__(self,
+                 data_name:str,
+                 img_size:int,
+                 img_dim:int,
+                 is_extension:bool,
+                 is_sampling:bool,
+                 batch_size:int=128,
+                 steps:int=2000,
+                 num_workers=4,
+                 pin_memory=True):
         super(DataModule_, self).__init__()
         self.batch_size = batch_size
         self.steps = steps
@@ -126,7 +135,7 @@ class DataModule_(pl.LightningDataModule):
         self.img_size = img_size
         self.img_dim = img_dim
         self.is_sampling = is_sampling
-
+        self.is_extension = is_extension
 
         self.transforms = Compose([ToTensor(),
                                    # Grayscale() if self.img_dim == 1 else Lambda(lambda x: x),
@@ -142,7 +151,7 @@ class DataModule_(pl.LightningDataModule):
         m = importlib.import_module('utils.datasets')
         self.dataset_train = getattr(m, self.data_name)(
                                      is_train=True,
-                                     extention=True,
+                                     is_extension=self.is_extension,
                                      batch_size=self.batch_size,
                                      steps=self.steps,
                                      transform=self.transforms)
@@ -161,7 +170,7 @@ class DataModule_(pl.LightningDataModule):
 
         self.dataset_val = getattr(m, self.data_name)(
                                      is_train=True,
-                                     extention=False,
+                                     is_extension=False,
                                      batch_size=self.batch_size,
                                      steps=self.steps,
                                      transform=self.transforms)

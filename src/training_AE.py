@@ -2,7 +2,7 @@ import torch
 import torch.nn.functional as F
 import pytorch_lightning as pl
 from torch.optim import Adam
-from utils.dataset import DataModule_
+from utils.datasets import DataModule_
 from pytorch_lightning.loggers import WandbLogger
 from models import Encoder, Decoder, Embedding_labeled_latent
 from argparse import ArgumentParser
@@ -11,6 +11,7 @@ from torchvision.utils import make_grid
 from torchvision.transforms.functional import to_pil_image
 # wandb.login(key = '6afc6fd83ea84bf316238272eb71ef5a18efd445')
 # wandb.init(project='MYGAN', name='BEGAN-AE')
+from utils.misc import str2bool
 
 
 class Autoencoder(pl.LightningModule):
@@ -115,7 +116,11 @@ if __name__ == "__main__":
     parser.add_argument("--img_dim", type=int, default=1, required=False)
     parser.add_argument("--latent_dim", type=int, default=128, required=False)
     parser.add_argument("--data_name", type=str, default='imb_MNIST',
-                        choices=['imb_CIFAR10', 'imb_MNIST', 'imb_FashionMNIST'], required=False)
+                        choices=['CIFAR10_LT', 'MNIST_LT', 'FashionMNIST_LT', 'Places_LT'], required=False)
+    parser.add_argument("--is_sampling", type=str2bool, default='false', required=False)
+    parser.add_argument("--img_size", type=int, default=64, required=False)
+    parser.add_argument("--is_extension", type=str2bool, default='false', required=False)
+
     parser = Autoencoder.add_model_specific_args(parser)
 
     args = parser.parse_args()
