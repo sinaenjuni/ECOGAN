@@ -228,6 +228,7 @@ if __name__ == "__main__":
     parser.add_argument("--img_dim", type=int, default=1, required=False)
     parser.add_argument("--is_sampling", type=str2bool, default='false', required=False)
     parser.add_argument("--batch_size", type=int, default=128, required=False)
+    parser.add_argument("--is_extension", type=str2bool, default='true', required=False)
 
     args = parser.parse_args()
     dm = DataModule_.from_argparse_args(args)

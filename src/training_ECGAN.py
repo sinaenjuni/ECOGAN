@@ -214,9 +214,10 @@ if __name__ == "__main__":
     parser.add_argument("--img_size", type=int, default=64, required=False)
     parser.add_argument("--latent_dim", type=int, default=128, required=False)
     parser.add_argument("--batch_size", type=int, default=128, required=False)
-    parser.add_argument("--is_sampling", type=bool, default=False, required=False)
+    parser.add_argument("--is_sampling", type=str2bool, default='false', required=False)
     parser.add_argument("--gpus", nargs='+', type=int, default=7, required=False)
     parser.add_argument("--d_embed_dim", type=int, default=512, required=False)
+    parser.add_argument("--is_extension", type=str2bool, default='true', required=False)
     parser.add_argument("--data_name", type=str, default='imb_FashionMNIST',
                         choices=['CIFAR10_LT', 'MNIST_LT', 'FashionMNIST_LT', 'Places_LT'], required=False)
 
