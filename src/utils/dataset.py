@@ -18,11 +18,10 @@ img_dims = {'imb_CIFAR10': 3, 'imb_MNIST': 1, 'imb_FashionMNIST': 1}
 IMG_EXTENSIONS = (".jpg", ".jpeg", ".png", ".ppm", ".bmp", ".pgm", ".tif", ".tiff", ".webp")
 
 
-# import importlib
-# m = importlib.import_module('utils.dataset')
-# cls = getattr(m, 'PlacesLTDataset')()
+import importlib
+m = importlib.import_module('utils.datasets')
+# cls = getattr(m, 'Places_LT')(is_train=False)
 # cls.num_ori
-
 
 
 class DataModule_(pl.LightningDataModule):
@@ -49,7 +48,7 @@ class DataModule_(pl.LightningDataModule):
     def setup(self, stage):
         # self.dataset_train = ImageFolder(self.path_train, transform=self.transforms)
         # self.dataset_train = MyImageFolderDataset(self.path_train, batch_size=self.batch_size, steps=self.steps, transform=self.transforms)
-        self.dataset_train = PlacesLTDataset(is_train=True, batch_size=self.batch_size, steps=self.steps, transform=self.transforms)
+        self.dataset_train = getattr(m, self.data_name)(is_train=True, batch_size=self.batch_size, steps=self.steps, transform=self.transforms)
         if self.is_sampling:
             unique, counts = np.unique(self.dataset_train.targets, return_counts=True)
             # n_sample = len(self.dataset_train.targets)
@@ -61,7 +60,7 @@ class DataModule_(pl.LightningDataModule):
                 dataset=self.dataset_train, weights=weights)
 
         # self.dataset_val = ImageFolder(self.path_test, transform=self.transforms)
-        self.dataset_val = PlacesLTDataset(is_train=False, batch_size=self.batch_size, steps=self.steps, transform=self.transforms)
+        self.dataset_val = getattr(m, self.data_name)(is_train=False, batch_size=self.batch_size, steps=self.steps, transform=self.transforms)
 
 
     def train_dataloader(self):

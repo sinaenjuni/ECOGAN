@@ -12,13 +12,15 @@ import importlib
 
 class MyDataset(Dataset):
     def __init__(self, is_extension:bool, batch_size:int, steps:int, transform=None):
-        self.data:list
-        self.targets:list
-        self.num_ori:int
+        self.is_extension:bool = is_extension
         self.batch_size:int = batch_size
         self.steps:int = steps
-        self.is_extension:bool = is_extension
         self.transform = transform
+
+        self.data:list
+        self.targets:list
+
+        self.num_ori:int
         self.num_classes:int
         self.classes:list
 
@@ -91,6 +93,15 @@ class Places_LT(MyDataset):
                 data, targets = zip(*[(base_path / row.split(' ')[0], int(row.split(' ')[1])) for row in f.readlines()])
 
         self.parse_data_path(data, targets)
+
+
+
+
+
+base_path = Path('/shared_hdd/sin/dataset/Places/train_256_places365standard')
+with open('/shared_hdd/sin/dataset/ImageNet_LT/ImageNet_LT_train.txt', 'r') as f:
+    data, targets = zip(*[(base_path / row.split(' ')[0], int(row.split(' ')[1])) for row in f.readlines()])
+
 
 # dataset = Places_LT(is_train=True, is_sampling=False, transform=Compose(
 #                                                                 [ToTensor(),

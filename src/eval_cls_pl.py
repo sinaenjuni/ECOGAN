@@ -10,55 +10,34 @@ from torch.optim import Adam, SGD
 from argparse import ArgumentParser
 import pytorch_lightning as pl
 from pytorch_lightning.loggers import WandbLogger
-from utils.dataset import DataModule_, Eval_gen_cls_dataset
+from utils.dataset import DataModule_
 from utils.confusion_matrix import ConfusionMatrix
-# from torchmetrics import ConfusionMatrix
+from PIL import Image
+from torchvision.transforms import Compose, Normalize, ToTensor, Resize
 
-# ori_imb_data_path = "/home/dblab/git/PyTorch-StudioGAN/data/imb_cifar10/train"
-# # paths = {"EBGAN_gened_data_path" : "/home/dblab/git/EBGAN/save_files/EBGAN_restore_data",
-# #          "ContraGAN_gened_data_path" : "/home/dblab/git/ECOGNA/save_files/contraGAN_restore_data",
-# #          "ECOGAN_gened_data_path" : "/home/dblab/git/ECOGNA/save_files/ECOGAN_restore_data"}
-#
-# paths = {"EBGAN_gened_data_path" : "/shared_hdd/sin/save_files/gened_img/EBGAN",
-#          "BEGAN_pre-trained_gened_data_path" : "/shared_hdd/sin/save_files/gened_img/EBGAN_pre-trained",
-#          # "ECOGAN_gened_data_path" : "/shared_hdd/sin/save_files/gened_img/ECOGAN"
-# }
+img_size = 64
+img_dim = 3
+transform = Compose([ToTensor(),
+                   # Grayscale() if self.img_dim == 1 else Lambda(lambda x: x),
+                   Resize(img_size),
+                   Normalize(mean=[0.5] * img_dim,
+                             std=[0.5] * img_dim)
+                    ])
 
-# gen_path = Path('/shared_hdd/sin/gen/')
-# gen_path = Path('/shared_hdd/sin/gen/2000/ECOGAN(imb_CIFAR10_128)')
-#
-# for i in gen_path.glob('*/*'):
-#     # print(i)
-#     print(int(i.parts[-2][-1]))
-# t_path = list(gen_path.glob('*/*'))
-#
-# [i for i in gen_path.glob('*/*/*/*')]
+
+import importlib
+m = importlib.import_module('utils.datasets')
+dataset_ori = getattr(m, 'Places_LT')()
+data_ori = [transform(Image.open(path)) for path in dataset_ori.data]
 
 
 
-# for path_ in gen_path.glob('*/*'):
-#     print(path_)
-#     for ori_name, ori_path in paths_train.items():
-#         if ori_name in str(path_):
-#             print(path_, ori_name)
-#     # if str(path_) in paths_train.keys():
-#     #     print(path_)
-#
-#     # dataset = ImageFolder(type)
-#     # print(dataset, dataset.classes)
-#
-# data_names = ['imb_CIFAR10', 'imb_MNIST', 'imb_FashionMNIST']
-# sel_name = [data_name for data_name in data_names if data_name in str(path_)][0]
-#
 
 
-# paths_train = {'imb_CIFAR10': '/home/dblab/git/PyTorch-StudioGAN/data/imb_cifar10/train',
-#                'imb_MNIST': '/home/shared_hdd/shared_hdd/sin/save_files/imb_MNIST/train',
-#                'imb_FashionMNIST': '/home/shared_hdd/shared_hdd/sin/save_files/imb_FashionMNIST/train'}
-#
-# paths_test = {'imb_CIFAR10': '/home/dblab/git/PyTorch-StudioGAN/data/imb_cifar10/val',
-#               'imb_MNIST': '/home/shared_hdd/shared_hdd/sin/save_files/imb_MNIST/val',
-#               'imb_FashionMNIST': '/home/shared_hdd/shared_hdd/sin/save_files/imb_FashionMNIST/val'}
+
+
+
+
 
 
 class Eval_cls_model(pl.LightningModule):

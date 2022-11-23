@@ -70,7 +70,6 @@ len(path)
 
 num = np.unique(dlabel, return_counts=True)[1]
 num.sort()
-os.
 
 
 
