@@ -99,7 +99,7 @@ with h5py.File(base_path, 'w') as hf:
     # print(data_name)
 
 f = h5py.File('/shared_hdd/sin/gen/gen.h5py', 'r')
-f['gened_data']['Places_LT'].keys()
+f['gened_data'].keys()
 f['gened_data']['Places_LT']['1vdnnadg'].keys()
 f['gened_data']['Places_LT']['1vdnnadg']['targets']
 f.close()
