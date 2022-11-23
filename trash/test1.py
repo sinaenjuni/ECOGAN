@@ -5,6 +5,7 @@ from tqdm import tqdm
 from pathlib import Path
 from models import Generator
 import importlib
+from PIL import Image
 
 dataset_ori = getattr(m, 'CIFAR10_LT')(is_extension=False)
 
@@ -13,12 +14,40 @@ for i in dataset_ori:
 
 
 import h5py
-base_path = Path('/shared_hdd/sin/gen/gen.h5py')
+base_path = Path('/shared_hdd/sin/gen/ori.h5py')
+
+dataset_ori = getattr(m, 'Places_LT')(is_train=True, is_extension=False, steps=2000)
+h5_ori = h5py.File(base_path, 'w')
+h5_ori.create_group(f'Places_LT/train/')
+h5_ori.create_group(f'Places_LT/test/')
+h5_ori.close()
+
+
+imgs = []
+targets = []
+for path, target in tqdm(zip(dataset_ori.data, dataset_ori.targets)):
+    img = Image.open(path)
+    img = np.array(img)
+    imgs.append(img)
+    targets.append(target)
+    # print(img, target)
+
+targets = np.array(targets)
+imgs = np.array(imgs)
+imgs = imgs.transpose(0, 3, 1, 2)
+h5_ori.create_dataset(f'Places_LT/train/data', data=imgs)
+h5_ori.create_dataset(f'Places_LT/train/targets', data=targets)
+
+
+del(h5_ori['Places_LT']['train']['data'])
+h5_ori['Places_LT']['train']['data']
+h5_ori['Places_LT']['train']['targets']
 
 
 
 
-# api = wandb.Api()
+
+# api = wandb.Api()ß
 # project = api.project('MYTEST0')
 # project
 #
@@ -38,7 +67,12 @@ base_path = Path('/shared_hdd/sin/gen/gen.h5py')
 # dir(runs[0].client)
 #
 
+dataset_ori = getattr(m, 'CIFAR10_LT')(is_extension=False, steps=2000)
+dataset_ori.
+len(dataset_ori)
 
+for i, data in enumerate(dataset_ori):
+    print(i)
 
 
 m = importlib.import_module('utils.datasets')
@@ -99,7 +133,12 @@ with h5py.File(base_path, 'w') as hf:
     # print(data_name)
 
 f = h5py.File('/shared_hdd/sin/gen/gen.h5py', 'r')
-f['gened_data'].keys()
+data1 = f['gened_data']['CIFAR10_LT']['1r08m7xe']['data']
+data2 = f['gened_data']['CIFAR10_LT']['1r08m7xe']['data']
+data1[1:20].shape
+data2[2]
+
+targets = f['gened_data']['CIFAR10_LT']['1r08m7xe']['targets']
 f['gened_data']['Places_LT']['1vdnnadg'].keys()
 f['gened_data']['Places_LT']['1vdnnadg']['targets']
 f.close()
