@@ -88,7 +88,7 @@ class Places_LT(MyDataset):
             with open('/shared_hdd/sin/dataset/Places_LT/Places_LT_train.txt', 'r') as f:
                 data, targets = zip(*[(base_path / row.split(' ')[0], int(row.split(' ')[1])) for row in f.readlines()])
         else:
-            base_path = Path('/shared_hdd/sin/dataset/Places/test_256/test_256')
+            base_path = Path('/shared_hdd/sin/dataset/Places/val_256/')
             with open('/shared_hdd/sin/dataset/Places_LT/Places_LT_test.txt', 'r') as f:
                 data, targets = zip(*[(base_path / row.split(' ')[0], int(row.split(' ')[1])) for row in f.readlines()])
 
