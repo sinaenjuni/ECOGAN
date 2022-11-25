@@ -44,6 +44,38 @@ data_info=[
 #         print(data['data'].shape)
 #         print(np.transpose(data['data'], (0,2,3,1)).shape)
 
+
+
+class imbalanced_dataset(Dataset):
+    def __init__(self, data_info, is_train=True, transform=None):
+        self.is_train = is_train
+        self.transform = transform
+        base_path = Path('/shared_hdd/sin/gen/')
+
+        self.h5_ori = h5py.File(base_path / 'ori.h5py', 'r')
+
+        if self.is_train:
+            self.data_ori = self.h5_ori[data_info]['train']['data']
+            self.targets_ori = self.h5_ori[data_info]['train']['targets']
+        else:
+            self.data_ori = self.h5_ori[data_info]['test']['data']
+            self.targets_ori = self.h5_ori[data_info]['test']['targets']
+
+    def __len__(self):
+        if self.is_train:
+            return 100000
+        else:
+            return len(self.data_ori)
+    def __getitem__(self, idx):
+        idx = int(idx % len(self.data_ori))
+        img = self.data_ori[idx]
+        target = self.targets_ori[idx]
+
+        if self.transform is not None:
+            img = self.transform(img)
+
+        return img, target
+
 class merged_dataset(Dataset):
     def __init__(self, data_info, is_train=True, transform=None):
         self.is_train = is_train
@@ -66,7 +98,7 @@ class merged_dataset(Dataset):
 
     def __len__(self):
         if self.is_train:
-            return len(self.data_ori) + len(self.data_gen)
+            return 128*100000
         else:
             return len(self.data_ori)
 
@@ -86,10 +118,23 @@ class merged_dataset(Dataset):
 
 
 
+transform = Compose([ToTensor(),
+                         Resize(64),
+                         Lambda(lambda x: x.repeat(3, 1, 1) if x.size(0) == 1 else x),
+                         Normalize([0.5, 0.5, 0.5],
+                                   [0.5, 0.5, 0.5])
+                         ])
 
+dataset = merged_dataset(data_info=data_info[10], is_train=True, transform=transform)
+dataset = imbalanced_dataset(data_info='CIFAR10_LT', is_train=True, transform=transform)
+loader = DataLoader(dataset, batch_size=128, shuffle=True)
 
-dataset = merged_dataset(data_info=data_info[4], is_train=True, transform=transform)
+print(len(loader))
 
+temp = []
+ap = temp.append
+for img, target in tqdm(loader):
+    ap(target)
 
 
 

@@ -19,37 +19,52 @@ from pathlib import Path
 import h5py
 
 
-
-class imbalanced_dataset(Dataset):
+class merged_dataset(Dataset):
     def __init__(self, data_info, is_train=True, transform=None):
         self.is_train = is_train
         self.transform = transform
+        self.data_name, self.data_id = data_info
         base_path = Path('/shared_hdd/sin/gen/')
 
         self.h5_ori = h5py.File(base_path / 'ori.h5py', 'r')
+        self.h5_gen = h5py.File(base_path / 'gen.h5py', 'r')
 
         if self.is_train:
-            self.data_ori = self.h5_ori[data_info]['train']['data']
-            self.targets_ori = self.h5_ori[data_info]['train']['targets']
+            self.data_ori = self.h5_ori[self.data_name]['train']['data']
+            self.targets_ori = self.h5_ori[self.data_name]['train']['targets']
+
+            self.data_gen = self.h5_gen[self.data_name][self.data_id]['data']
+            self.targets_gen = self.h5_gen[self.data_name][self.data_id]['targets']
         else:
-            self.data_ori = self.h5_ori[data_info]['test']['data']
-            self.targets_ori = self.h5_ori[data_info]['test']['targets']
+            self.data_ori = self.h5_ori[self.data_name]['test']['data']
+            self.targets_ori = self.h5_ori[self.data_name]['test']['targets']
 
     def __len__(self):
-        return len(self.data_ori)
+        if self.is_train:
+            return len(self.data_ori) + len(self.data_gen)
+        else:
+            return len(self.data_ori)
+
     def __getitem__(self, idx):
-        img = self.data_ori[idx]
-        target = self.targets_ori[idx]
+        # idx = int(idx / (len(self.data_ori) + len(self.data_ori)))
+        if idx < len(self.data_ori):
+            img = self.data_ori[idx]
+            target = self.targets_ori[idx]
+        else:
+            idx = idx - len(self.data_ori)
+            img = self.data_gen[idx]
+            target = self.targets_gen[idx]
 
         if self.transform is not None:
             img = self.transform(img)
 
         return img, target
 
+
 class ClsTestDM(pl.LightningDataModule):
-    def __init__(self, data_name, img_size, batch_size):
+    def __init__(self, data_info, img_size, batch_size):
         super(ClsTestDM, self).__init__()
-        self.data_name = data_name
+        self.data_info = data_info
         self.batch_size = batch_size
         self.img_size = img_size
 
@@ -60,8 +75,8 @@ class ClsTestDM(pl.LightningDataModule):
                                            [0.5, 0.5, 0.5])
                                  ])
     def setup(self, stage):
-        self.dataset_train = imbalanced_dataset(data_info=self.data_name, is_train=True, transform=self.transform)
-        self.dataset_test = imbalanced_dataset(data_info=self.data_name, is_train=False, transform=self.transform)
+        self.dataset_train = merged_dataset(data_info=self.data_info, is_train=True, transform=self.transform)
+        self.dataset_test = merged_dataset(data_info=self.data_info, is_train=False, transform=self.transform)
 
     def train_dataloader(self):
         return DataLoader(self.dataset_train, shuffle=True, batch_size=self.batch_size, num_workers=4, pin_memory=True)
@@ -135,16 +150,36 @@ class Eval_cls_model(pl.LightningModule):
         return SGD(self.parameters(), lr=self.lr)
 
 
-
+data = [
+    ('CIFAR10_LT', '1r08m7xe'),
+    ('CIFAR10_LT', '3rczol1e'),
+    ('CIFAR10_LT', '3u337fao'),
+    ('CIFAR10_LT', '6gem8lca'),
+    ('FashionMNIST_LT', '3p2vbr49'),
+    ('FashionMNIST_LT', 'i2mijyme'),
+    ('FashionMNIST_LT', 'iitr6wnc'),
+    ('FashionMNIST_LT', 'vpgfgriu'),
+    ('Places_LT', '1qlor8tk'),
+    ('Places_LT', '1vdnnadg'),
+    ('Places_LT', '23rk0cyl'),
+    ('Places_LT', '2bi04amy')]
 
 parser = ArgumentParser()
 parser.add_argument("--num_classes", type=int, default=10, required=False)
 parser.add_argument("--lr", type=float, default=0.01, required=False)
 parser.add_argument("--img_size", type=int, default=32, required=False)
 parser.add_argument("--batch_size", type=int, default=128, required=False)
-parser.add_argument("--data_name", type=str, default='CIFAR10_LT',
-                    choices=['CIFAR10_LT', 'FashionMNIST_LT', 'Places_LT'], required=False)
 parser.add_argument("--gpus", nargs='+', type=int, default=7, required=False)
+parser.add_argument("--data", type=int, default=0, required=False)
+
+args = parser.parse_args()
+
+parser.add_argument("--data_info", type=tuple, default=data[args.data], required=False)
+# parser.add_argument("--data_name", type=str, default=data[args.data][0], required=False)
+# parser.add_argument("--data_id", type=str, default=data[args.data][1], required=False)
+#
+
+
 
 args = parser.parse_args()
 # dm = Eval_gen_cls_dataset.from_argparse_args(args)
@@ -155,7 +190,7 @@ dm = ClsTestDM.from_argparse_args(args)
 model = Eval_cls_model(**vars(args))
 wandb_logger = WandbLogger(project="eval_cls", name=f"original", log_model=True)
 # wandb.define_metric('val/acc', summary='max')
-# wandb_logger.watch(model, log='all')
+# wandb_logger.watch(model, log='all')ß
 
 trainer = pl.Trainer.from_argparse_args(args,
     default_root_dir='/shared_hdd/sin/save_files/cls_tset/',
