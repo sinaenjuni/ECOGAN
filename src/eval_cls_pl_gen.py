@@ -4,7 +4,7 @@
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-from torchvision.models import resnet18
+from torchvision.models import resnet18, resnet34
 from torch.optim import Adam, SGD
 
 from argparse import ArgumentParser
@@ -91,7 +91,7 @@ class Eval_cls_model(pl.LightningModule):
         self.save_hyperparameters()
 
         self.lr = lr
-        self.model = resnet18(pretrained=False, num_classes=num_classes)
+        self.model = resnet34(pretrained=False, num_classes=num_classes)
         # self.model.conv1 = nn.Conv2d(img_dim, 64, kernel_size=7, stride=2, padding=3, bias=False)
         self.cm_train = ConfusionMatrix(num_classes=num_classes)
         self.cm_val = ConfusionMatrix(num_classes=num_classes)
@@ -188,7 +188,7 @@ dm = ClsTestDM.from_argparse_args(args)
 # args = parser.parse_args()
 
 model = Eval_cls_model(**vars(args))
-wandb_logger = WandbLogger(project="eval_cls", name=f"original", log_model=True)
+wandb_logger = WandbLogger(project="eval_cls", name=f"resnet34", log_model=True)
 # wandb.define_metric('val/acc', summary='max')
 # wandb_logger.watch(model, log='all')ß
 
