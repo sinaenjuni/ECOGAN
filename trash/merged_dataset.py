@@ -7,8 +7,6 @@ from torch.utils.data import Dataset, DataLoader
 from torchvision.transforms import ToTensor, Compose, Normalize, Resize, Lambda
 
 
-
-
 data_info=[
 ('CIFAR10_LT', '1r08m7xe'),
 ('CIFAR10_LT', '3rczol1e'),
@@ -25,29 +23,26 @@ data_info=[
 
 
 
-
-base_path = Path('/shared_hdd/sin/gen')
-h5_gen = h5py.File(base_path / 'gen.h5py', 'r')
-h5_ori = h5py.File(base_path / 'ori.h5py', 'r')
-
-data_ori = h5_ori['CIFAR10_LT']['train']['data']
-data_gen = h5_gen['gened_data']['CIFAR10_LT']['3rczol1e']['data'].shape
-
-
-for data_name, data in h5_ori.items():
-    print(data_name)
-    for data_type, data2 in data.items():
-        print(data_type, data2['data'].shape, data2['targets'].shape)
-
-
-for data_name, data_set in h5_gen.items():
-    # print(data_name)
-    for data_type, data in data_set.items():
-        print(f"('{data_name}', '{data_type}')")
-        print(data['data'].shape)
-        # print(np.transpose(data['data'], (0,2,3,1)).shape)
-
-
+# base_path = Path('/shared_hdd/sin/gen')
+# h5_gen = h5py.File(base_path / 'gen.h5py', 'r')
+# h5_ori = h5py.File(base_path / 'ori.h5py', 'r')
+#
+# data_ori = h5_ori['CIFAR10_LT']['train']['data']
+# data_gen = h5_gen['gened_data']['CIFAR10_LT']['3rczol1e']['data'].shape
+#
+#
+# for data_name, data in h5_ori.items():
+#     print(data_name)
+#     for data_type, data2 in data.items():
+#         print(data_type, data2['data'].shape, data2['targets'].shape)
+#
+#
+# for data_name, data_set in h5_gen.items():
+#     # print(data_name)
+#     for data_type, data in data_set.items():
+#         print(f"('{data_name}', '{data_type}')")
+#         print(data['data'].shape)
+#         print(np.transpose(data['data'], (0,2,3,1)).shape)
 
 class merged_dataset(Dataset):
     def __init__(self, data_info, is_train=True, transform=None):
@@ -91,13 +86,16 @@ class merged_dataset(Dataset):
 
 
 
-transform = Compose([ToTensor(),
-                     Resize(64),
-                     Lambda(lambda x: x.repeat(3, 1, 1) if x.size(0) == 1 else x),
-                     Normalize([0.5,0.5,0.5],
-                               [0.5,0.5,0.5])
-                     ])
 
+
+dataset = merged_dataset(data_info=data_info[4], is_train=True, transform=transform)
+
+
+
+
+import matplotlib.pyplot as plt
+plt.imshow((img[0].permute(1,2,0)  + 0.5 ) * 0.5)
+plt.show()
 
 for data_info_ in data_info:
     print(data_info_)

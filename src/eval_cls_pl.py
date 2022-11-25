@@ -13,41 +13,73 @@ from pytorch_lightning.loggers import WandbLogger
 from utils.dataset import DataModule_
 from utils.confusion_matrix import ConfusionMatrix
 from PIL import Image
-from torchvision.transforms import Compose, Normalize, ToTensor, Resize
-
-img_size = 64
-img_dim = 3
-transform = Compose([ToTensor(),
-                   # Grayscale() if self.img_dim == 1 else Lambda(lambda x: x),
-                   Resize(img_size),
-                   Normalize(mean=[0.5] * img_dim,
-                             std=[0.5] * img_dim)
-                    ])
-
-
-import importlib
-m = importlib.import_module('utils.datasets')
-dataset_ori = getattr(m, 'Places_LT')()
-data_ori = [transform(Image.open(path)) for path in dataset_ori.data]
+from torchvision.transforms import Compose, Normalize, ToTensor, Resize, Lambda
+from torch.utils.data import Dataset, DataLoader
+from pathlib import Path
+import h5py
 
 
 
+class imbalanced_dataset(Dataset):
+    def __init__(self, data_info, is_train=True, transform=None):
+        self.is_train = is_train
+        self.transform = transform
+        base_path = Path('/shared_hdd/sin/gen/')
+
+        self.h5_ori = h5py.File(base_path / 'ori.h5py', 'r')
+
+        if self.is_train:
+            self.data_ori = self.h5_ori[data_info]['train']['data']
+            self.targets_ori = self.h5_ori[data_info]['train']['targets']
+        else:
+            self.data_ori = self.h5_ori[data_info]['test']['data']
+            self.targets_ori = self.h5_ori[data_info]['test']['targets']
+
+    def __len__(self):
+        return len(self.data_ori)
+
+    def __getitem__(self, idx):
+        img = self.data_ori[idx]
+        target = self.targets_ori[idx]
+
+        if self.transform is not None:
+            img = self.transform(img)
+
+        return img, target
 
 
+class ClsTestDM(pl.LightningDataModule):
+    def __init__(self, data_name, img_size, batch_size):
+        super(ClsTestDM, self).__init__()
+        self.data_name = data_name
+        self.batch_size = batch_size
+        self.img_size = img_size
 
+        self.transform = Compose([ToTensor(),
+                                 Resize(self.img_size),
+                                 Lambda(lambda x: x.repeat(3, 1, 1) if x.size(0) == 1 else x),
+                                 Normalize([0.5, 0.5, 0.5],
+                                           [0.5, 0.5, 0.5])
+                                 ])
+    def setup(self, stage):
+        self.dataset_train = imbalanced_dataset(data_info=self.data_name, is_train=True, transform=self.transform)
+        self.dataset_test = imbalanced_dataset(data_info=self.data_name, is_train=False, transform=self.transform)
 
+    def train_dataloader(self):
+        return DataLoader(self.dataset_train, shuffle=True, batch_size=self.batch_size, num_workers=4, pin_memory=True)
 
-
+    def val_dataloader(self):
+        return DataLoader(self.dataset_test, shuffle=False, batch_size=self.batch_size, num_workers=4, pin_memory=True)
 
 
 class Eval_cls_model(pl.LightningModule):
-    def __init__(self, img_dim, num_classes, lr, **kwargs):
+    def __init__(self, num_classes, lr, **kwargs):
         super(Eval_cls_model, self).__init__()
         self.save_hyperparameters()
 
         self.lr = lr
         self.model = resnet18(pretrained=False, num_classes=num_classes)
-        self.model.conv1 = nn.Conv2d(img_dim, 64, kernel_size=7, stride=2, padding=3, bias=False)
+        # self.model.conv1 = nn.Conv2d(img_dim, 64, kernel_size=7, stride=2, padding=3, bias=False)
         self.cm_train = ConfusionMatrix(num_classes=num_classes)
         self.cm_val = ConfusionMatrix(num_classes=num_classes)
         self.best_acc = 0
@@ -104,38 +136,22 @@ class Eval_cls_model(pl.LightningModule):
         return SGD(self.parameters(), lr=self.lr)
 
 
-# dm = DataModule_(data_name, batch_size=128)
-# model = Eval_cls_model(num_classes=10, lr=0.01)
 
-
-
-# trainer = pl.Trainer(
-#     default_root_dir='/shared_hdd/sin/save_files/cls_tset/',
-#     fast_dev_run=False,
-#     max_epochs=100,
-#     # callbacks=[pl.callbacks.ModelCheckpoint(monitor="train_loss", mode='min')],
-#     logger=wandb_logger,
-#     strategy='ddp',
-#     accelerator='gpu',
-#     gpus=1,
-# )
 
 parser = ArgumentParser()
-# parser.add_argument("--gen_path", type=str, required=True)
 parser.add_argument("--num_classes", type=int, default=10, required=False)
-parser.add_argument("--max_epochs", type=int, default=2, required=False)
-# parser.add_argument("--max_steps", type=int, default=1000, required=False)
+parser.add_argument("--max_epochs", type=int, default=100, required=False)
+# parser.add_argument("--max_steps", type=int, default=100000, required=False)
 parser.add_argument("--lr", type=float, default=0.01, required=False)
 parser.add_argument("--img_size", type=int, default=32, required=False)
-parser.add_argument("--is_sampling", type=bool, default=False, required=False)
-parser.add_argument("--img_dim", type=int, default=3, required=False)
-parser.add_argument("--data_name", type=str, default='imb_CIFAR10',
-                    choices=['imb_CIFAR10', 'imb_MNIST', 'imb_FashionMNIST'], required=False)
+parser.add_argument("--batch_size", type=int, default=128, required=False)
+parser.add_argument("--data_name", type=str, default='CIFAR10_LT',
+                    choices=['CIFAR10_LT', 'FashionMNIST_LT', 'Places_LT'], required=False)
 parser.add_argument("--gpus", nargs='+', type=int, default=7, required=False)
 
 args = parser.parse_args()
 # dm = Eval_gen_cls_dataset.from_argparse_args(args)
-dm = DataModule_.from_argparse_args(args)
+dm = ClsTestDM.from_argparse_args(args)
 # parser.add_argument("--img_dim", type=int, default=dm.img_dim, required=False)
 # args = parser.parse_args()
 
@@ -147,7 +163,7 @@ wandb_logger = WandbLogger(project="eval_cls", name=f"original", log_model=True)
 trainer = pl.Trainer.from_argparse_args(args,
     default_root_dir='/shared_hdd/sin/save_files/cls_tset/',
     # fast_dev_run=True,
-    max_epochs=200,
+    # max_epochs=200,
     # callbacks=[pl.callbacks.ModelCheckpoint(monitor="val/acc", mode='max')],
     logger=wandb_logger,
     # strategy='ddp',
