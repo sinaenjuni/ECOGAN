@@ -175,9 +175,9 @@ class DataModule_(pl.LightningDataModule):
             n_sample = self.dataset_train.num_ori
             weight = [n_sample / count for count in counts]
             weights = [weight[label] for label in self.dataset_train.targets]
-            # self.sampler = WeightedRandomSampler(weights, n_sample)
-            self.sampler = DistributedWeightedSampler(
-                dataset=self.dataset_train, weights=weights)
+            self.sampler = WeightedRandomSampler(weights, n_sample)
+            # self.sampler = DistributedWeightedSampler(
+            #     dataset=self.dataset_train, weights=weights)
 
         self.dataset_val = getattr(m, self.data_name)(
                                      is_train=True,
