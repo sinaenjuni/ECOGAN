@@ -161,7 +161,7 @@ def setup_for_distributed(is_master):
 
 
 if __name__ == "__main__":
-    gpus = [1,2,3,4]
+    gpus = [1]
     os.environ["CUDA_VISIBLE_DEVICES"] = ", ".join(map(str, gpus))
 
 
