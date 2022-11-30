@@ -49,9 +49,28 @@ from torch.utils.data.distributed import DistributedSampler
 import importlib
 
 from tqdm import tqdm
+import numpy as np
+import wandb
 
 
-
+class ConfusionMatrix:
+    def __init__(self, num_classes):
+        self.num_classes = num_classes
+        self.confmat = np.zeros((num_classes, num_classes))
+        self.minlength = num_classes**2
+    def update(self, target, pred):
+        assert len(target) == len(pred)
+        unique_mapping = target.reshape(-1) * self.num_classes + pred.reshape(-1)
+        bins = np.bincount(unique_mapping, minlength=self.minlength)
+        self.confmat += bins.reshape(self.num_classes, self.num_classes)
+    def getConfusionMactrix(self):
+        return self.confmat
+    def getAccuracy(self):
+        return np.nan_to_num(self.confmat.trace() / self.confmat.sum())
+    def getAccuracyPerClass(self):
+        return np.nan_to_num(self.confmat.diagonal() / self.confmat.sum(1))
+    def reset(self):
+        self.confmat = np.zeros((self.num_classes, self.num_classes))
 
 
 class ToyModel(nn.Module):
@@ -69,6 +88,8 @@ def spmd_main(rank, world_size):
     print(f"rank: {rank}, world_size: {world_size}")
     setup(rank, world_size)
     current_steps = 0
+
+    # wandb.init(project="eval_cls", entity="sinaenjuni")
 
     transforms = Compose([ToTensor(),
                           Resize(32),
@@ -98,8 +119,10 @@ def spmd_main(rank, world_size):
     # loss_fn = nn.MSELoss()
     loss_fn = nn.CrossEntropyLoss()
     optimizer = optim.SGD(ddp_model.parameters(), lr=0.001)
+    total_loss = []
+    total_loss_append = total_loss.append
 
-    for epoch in tqdm(range(1000)):
+    for step in range(100):
         try:
             img, labels = next(iter_train)
             img, labels = img.to(rank), labels.to(rank)
@@ -116,10 +139,26 @@ def spmd_main(rank, world_size):
         loss = loss_fn(outputs, labels)
         loss.backward()
         optimizer.step()
+        total_loss_append(loss)
+
+        print(step, torch.stack(total_loss).mean())
+
+        # if step % 10 == 0:
+            # total_loss = torch.stack(total_loss)
+            # print(total_loss.mean())
+            # total_loss = []
+            # wandb.log({f"loss/{rank}": total_loss.mean()})
+
+        # total_loss_append(loss)
         # print(epoch, loss)
 
         # current_steps += 1
         # print(current_steps)
+    # print(len(total_loss))
+    # total_loss = torch.stack(total_loss)
+    # print(total_loss.mean())
+
+    wandb.finish()
     cleanup()
 
 
@@ -161,9 +200,8 @@ def setup_for_distributed(is_master):
 
 
 if __name__ == "__main__":
-    gpus = [1]
+    gpus = [1,2,3,4,5]
     os.environ["CUDA_VISIBLE_DEVICES"] = ", ".join(map(str, gpus))
-
 
     mp.set_start_method("spawn", force=True)
     world_size = len(gpus)
