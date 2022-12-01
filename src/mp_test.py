@@ -51,7 +51,7 @@ import importlib
 from tqdm import tqdm
 import numpy as np
 import wandb
-
+from argparse import ArgumentParser
 
 class ConfusionMatrix:
     def __init__(self, num_classes):
@@ -73,23 +73,13 @@ class ConfusionMatrix:
         self.confmat = np.zeros((self.num_classes, self.num_classes))
 
 
-class ToyModel(nn.Module):
-    def __init__(self):
-        super(ToyModel, self).__init__()
-        self.net1 = nn.Linear(10, 10)
-        self.relu = nn.ReLU()
-        self.net2 = nn.Linear(10, 5)
 
-    def forward(self, x):
-        return self.net2(self.relu(self.net1(x)))
-
-
-def spmd_main(rank, world_size):
+def worker(rank, world_size):
     print(f"rank: {rank}, world_size: {world_size}")
     setup(rank, world_size)
-    current_steps = 0
 
-    # wandb.init(project="eval_cls", entity="sinaenjuni")
+    run = wandb.init(project="eval_cls", entity="sinaenjuni")
+
 
     transforms = Compose([ToTensor(),
                           Resize(32),
@@ -98,29 +88,45 @@ def spmd_main(rank, world_size):
 
     dataset_module = importlib.import_module('utils.datasets')
     dataset_train = getattr(dataset_module, 'CIFAR10_LT')(is_train=True, is_extension=False, transform=transforms)
-    # dataset_test = getattr(dataset_module, 'CIFAR10_LT')(is_train=False, is_extension=False, transform=transforms)
+    dataset_test = getattr(dataset_module, 'CIFAR10_LT')(is_train=False, is_extension=False, transform=transforms)
 
-    sampler = DistributedSampler(dataset_train, rank=rank, num_replicas=world_size, shuffle=True)
+    sampler_train = DistributedSampler(dataset_train, rank=rank, num_replicas=world_size, shuffle=True)
     loader_train = DataLoader(dataset=dataset_train,
                               batch_size=128,
-                              sampler=sampler,
+                              sampler=sampler_train,
                               num_workers=1,
                               pin_memory=True,
                               persistent_workers=True)
     iter_train = iter(loader_train)
 
-    # print(len(loader_train))
+    sampler_test = DistributedSampler(dataset_test, rank=rank, num_replicas=world_size, shuffle=True)
+    loader_train = DataLoader(dataset=dataset_test,
+                              batch_size=128,
+                              sampler=sampler_test,
+                              num_workers=1,
+                              pin_memory=True,
+                              persistent_workers=True)
+
 
     model_module = importlib.import_module('torchvision.models.resnet')
     model = getattr(model_module, 'resnet18')(num_classes=10).to(rank)
-    # model = ToyModel().to(rank)
     ddp_model = DDP(model, device_ids=[rank])
 
     # loss_fn = nn.MSELoss()
     loss_fn = nn.CrossEntropyLoss()
     optimizer = optim.SGD(ddp_model.parameters(), lr=0.001)
-    total_loss = []
-    total_loss_append = total_loss.append
+
+
+    loss_train = []
+    loss_test = []
+    # loss_train_append = loss_train.append
+    # loss_test_append = loss_test.append
+
+
+
+    conf_train = ConfusionMatrix(10)
+    conf_test = ConfusionMatrix(10)
+
 
     for step in range(100):
         try:
@@ -131,42 +137,62 @@ def spmd_main(rank, world_size):
             img, labels = next(iter_train)
             img, labels = img.to(rank), labels.to(rank)
 
-        # print(img.size())
+        ddp_model.train()
         optimizer.zero_grad()
-        # outputs = ddp_model(torch.randn(20, 10))
-        # labels = torch.randn(20, 5).to(rank)
         outputs = ddp_model(img)
         loss = loss_fn(outputs, labels)
         loss.backward()
         optimizer.step()
-        total_loss_append(loss)
+        loss_train.append(loss)
+        conf_train.update(labels.cpu(), F.softmax(outputs, dim=1).argmax(1).cpu())
 
-        print(step, torch.stack(total_loss).mean())
 
-        # if step % 10 == 0:
-            # total_loss = torch.stack(total_loss)
-            # print(total_loss.mean())
-            # total_loss = []
-            # wandb.log({f"loss/{rank}": total_loss.mean()})
+        print(step, torch.stack(loss_train).mean())
 
-        # total_loss_append(loss)
-        # print(epoch, loss)
+        if (step+1) % 10 == 0:
+            acc = conf_train.getAccuracy()
+            acc_per_cls = conf_train.getAccuracyPerClass()
 
-        # current_steps += 1
-        # print(current_steps)
-    # print(len(total_loss))
-    # total_loss = torch.stack(total_loss)
-    # print(total_loss.mean())
+            print(acc)
+            run.log({f'acc/train{rank}': acc}, step=step+1)
+            # print({cls: f"{val:.2f}" for cls, val in zip(range(len(acc_per_cls)), acc_per_cls)})
+            conf_train.reset()
+            loss_train = []
 
-    wandb.finish()
+            for img, labels in loader_train:
+                img, labels = img.to(rank), labels.to(rank)
+                ddp_model.eval()
+                outputs = ddp_model(img)
+                loss = loss_fn(outputs, labels)
+                loss_test.append(loss)
+                conf_test.update(labels.cpu(), F.softmax(outputs, dim=1).argmax(1).cpu())
+
+            acc = conf_test.getAccuracy()
+            acc_per_cls = conf_test.getAccuracyPerClass()
+
+
+            print(step, torch.stack(loss_test).mean())
+            print(acc)
+            # print({cls: f"{val:.2f}" for cls, val in zip(range(len(acc_per_cls)), acc_per_cls)})
+            conf_test.reset()
+            loss_test = []
+
+        # print(outputs.argmax(1))
+
+
+
     cleanup()
 
 
 
+def load_configs_init():
+    parser = ArgumentParser()
+    parser.add_argument("--gpus", nargs='+', type=int, default=7, required=True)
 
+    args = parser.parse_args()
+    # cfgs = vars(args)
 
-
-
+    return args
 
 def setup(rank, world_size, backend="nccl"):
     os.environ['MASTER_ADDR'] = 'localhost'
@@ -200,22 +226,38 @@ def setup_for_distributed(is_master):
 
 
 if __name__ == "__main__":
-    gpus = [1,2,3,4,5]
-    os.environ["CUDA_VISIBLE_DEVICES"] = ", ".join(map(str, gpus))
+    #
+    # print(gpus_per_node, rank)
 
-    mp.set_start_method("spawn", force=True)
-    world_size = len(gpus)
-    print("Train the models through DistributedDataParallel (DDP) mode.")
-    ctx = torch.multiprocessing.spawn(fn=spmd_main,
-                                      args=(world_size,),
-                                      nprocs=world_size,
-                                      join=False)
-    # print(ctx)
-    ctx.join()
-    for process in ctx.processes:
-        process.kill()
+    args = load_configs_init()
+    os.environ["CUDA_VISIBLE_DEVICES"] = ", ".join(map(str, args.gpus))
+    world_size = len(args.gpus)
 
+    # gpus_per_node, rank = torch.cuda.device_count(), torch.cuda.current_device()
+    # print(gpus_per_node, rank)
 
+    # wandb.require('service')
+    # run = wandb.init(project="eval_cls", entity="sinaenjuni")
+
+    if len(args.gpus) > 1:
+        # gpus = [1,2,3,4,5]
+        # os.environ["CUDA_VISIBLE_DEVICES"] = ", ".join(map(str, gpus))
+
+        mp.set_start_method("spawn", force=True)
+        print("Train the models through DistributedDataParallel (DDP) mode.")
+        ctx = torch.multiprocessing.spawn(fn=worker,
+                                          args=(world_size,),
+                                          nprocs=world_size,
+                                          join=False)
+
+        # print(ctx)
+        ctx.join()
+        for process in ctx.processes:
+            process.kill()
+
+    else:
+        print("Train the models through Single GPU mode.")
+        worker(rank=0, world_size=world_size)
 
 
 
