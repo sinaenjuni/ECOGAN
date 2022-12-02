@@ -1,7 +1,7 @@
 import torch
 from torchvision.datasets import ImageFolder
 
-from src.models import Generator
+from src.model import Generator
 from pathlib import Path
 from PIL import Image
 import numpy as np

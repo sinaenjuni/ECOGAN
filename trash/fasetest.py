@@ -7,7 +7,7 @@ from torch.optim import Adam
 from utils.dataset import DataModule_
 from pytorch_lightning.loggers import WandbLogger
 import numpy as np
-from models import Generator, Discriminator
+from model import Generator, Discriminator
 from argparse import ArgumentParser
 from metric.img_metrics import Fid_and_is
 import wandb

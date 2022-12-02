@@ -3,7 +3,7 @@ import torch
 import wandb
 from tqdm import tqdm
 from pathlib import Path
-from models import Generator
+from model import Generator
 import importlib
 from PIL import Image
 import matplotlib.pyplot as plt

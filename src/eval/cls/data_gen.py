@@ -7,7 +7,7 @@ from pathlib import Path
 import torch
 from torch.utils.data import Dataset, DataLoader
 from torchvision.datasets import ImageFolder
-from models import Generator
+from model import Generator
 # from big_resnet import Generator
 from torchvision.transforms import ToTensor, Compose, Normalize
 
