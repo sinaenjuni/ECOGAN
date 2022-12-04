@@ -83,5 +83,24 @@ for epoch in range(150):
     print(loss_epoch/len(loader_train))
 
 
+latents = []
+targets = []
+for img, labels in loader_train:
+    img, labels = img.cuda(), labels.cuda()
+    with torch.no_grad():
+        outputs = bagan_ae.get_encoder(img)
+
+        latents.append(outputs.cpu().numpy())
+        targets.append(labels.cpu().numpy())
 
 
+latents_np = np.concatenate(latents)
+targets_np = np.concatenate(targets)
+
+np.mean(np.concatenate(latents))
+np.cov(np.concatenate(latents).T).shape
+torch.concat(targets)
+
+torch.concat(latents).mean()
+torch.concat(latents).T.cov().size()
+torch.concat(targets)
