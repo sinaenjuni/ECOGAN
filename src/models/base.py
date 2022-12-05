@@ -73,10 +73,10 @@ class Encoder(nn.Module):
         self.conv3 = nn.Sequential(nn.Conv2d(in_channels=self.dims[2], out_channels=self.dims[3], kernel_size=4, stride=2, padding=1),
                                    nn.LeakyReLU(negative_slope=0.2, inplace=True))
 
-        self.linear0 = nn.Sequential(nn.Flatten(1),
-                                     nn.Linear(in_features=self.dims[3] * (4 * 4), out_features=latent_dim),
-                                     nn.LeakyReLU(negative_slope=0.2, inplace=True)
-                                     )
+        # self.linear0 = nn.Sequential(nn.Flatten(1),
+        #                              nn.Linear(in_features=self.dims[3] * (4 * 4), out_features=latent_dim),
+        #                              nn.LeakyReLU(negative_slope=0.2, inplace=True)
+        #                              )
         self.apply(initialize_weights)
 
     def forward(self, x):
@@ -84,7 +84,6 @@ class Encoder(nn.Module):
         x = self.conv1(x)
         x = self.conv2(x)
         x = self.conv3(x)
-        x = self.linear0(x)
         return x
 
     def get_features(self, x):
