@@ -147,7 +147,7 @@ steps=100
 for step in range(steps):
     try:
         img_real, label_real = next(iter_train)
-    except:
+    except StopIteration:
         iter_train = iter(iter_train)
         img_real, label_real = next(iter_train)
 
@@ -251,3 +251,5 @@ with torch.no_grad():
     gen = make_grid(gen, nrow=10, normalize=True)
 plt.imshow(gen.cpu().permute(1,2,0))
 plt.show()
+
+
