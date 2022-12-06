@@ -6,53 +6,42 @@ from models.base import *
 from torch.distributions.multivariate_normal import MultivariateNormal
 
 
-class BAGANAE(nn.Module):
+class BaganEncoder(nn.Module):
     def __init__(self, img_dim, latent_dim):
-        super(BAGANAE, self).__init__()
+        super(BaganEncoder, self).__init__()
         self.encoder = Encoder(img_dim, latent_dim)
         self.linear = nn.Sequential(nn.Flatten(1),
                                      nn.Linear(in_features=self.encoder.dims[3] * (4 * 4), out_features=latent_dim))
-
-        self.decoder = Decoder(img_dim, latent_dim)
-
     def forward(self, img):
         out = self.encoder(img)
         out = self.linear(out)
-        out = self.decoder(out)
         return out
+class BaganDecoder(nn.Module):
+    def __init__(self, img_dim, latent_dim):
+        super(BaganDecoder, self).__init__()
+        self.decoder = Decoder(img_dim, latent_dim)
 
-    def get_encoder(self, img):
-        out = self.encoder(img)
-        out = self.linear(out)
-        return out
-
-    def get_decoder(self, img):
+    def forward(self, img):
         return self.decoder(img)
 
-class BAGAN(nn.Module):
+class BaganGenerator(nn.Module):
+    def __init__(self, img_dim, latent_dim):
+        super(BaganGenerator, self).__init__()
+        self.decoder = Decoder(img_dim, latent_dim)
+    def forward(self, latent):
+        return self.decoder(latent)
+
+class BaganDiscriminator(nn.Module):
     def __init__(self, img_dim, latent_dim, num_classes):
-        super(BAGAN, self).__init__()
-        self.encoder = Encoder(img_dim, latent_dim)
+        super(BaganDiscriminator, self).__init__()
+        self.encoder = Encoder(img_dim, latent_dim, num_classes)
         self.adv = nn.Sequential(nn.Flatten(1),
                                      nn.Linear(in_features=self.encoder.dims[3] * (4 * 4),
                                                out_features=num_classes+1))
-
-        self.decoder = Decoder(img_dim, latent_dim)
-
-    def forward(self, latent):
-        out = self.decoder(latent)
-        out = self.encoder(out)
-        out = self.adv(out)
-        return out
-
-    def get_generator(self, latent):
-        return self.decoder(latent)
-
-    def get_discriminator(self, img):
+    def forward(self, img):
         out = self.encoder(img)
         out = self.adv(out)
         return out
-
 
 class ClassCondLatentGen:
     def __init__(self):
@@ -68,7 +57,7 @@ class ClassCondLatentGen:
         for img, labels in data_loader:
             img, labels = img.cuda(), labels.cuda()
             with torch.no_grad():
-                outputs = model.get_encoder(img)
+                outputs = model(img)
 
                 self.latents.append(outputs.cpu().numpy())
                 self.targets.append(labels.cpu().numpy())
@@ -112,18 +101,22 @@ num_classes = len(loader_train.dataset.classes)
 latent_dim = 128
 img_dim = 3
 
-bagan_ae = BAGANAE(img_dim=img_dim, latent_dim=latent_dim).cuda()
-optimizer = torch.optim.Adam(bagan_ae.parameters(), lr =0.00005, betas=(0.5, 0.999))
+bagan_encoder = BaganEncoder(img_dim=img_dim, latent_dim=latent_dim).cuda()
+bagan_decoder = BaganDecoder(img_dim=img_dim, latent_dim=latent_dim).cuda()
+optimizer = torch.optim.Adam([{'params': bagan_encoder.parameters(),
+                               'params': bagan_decoder.parameters()}], lr =0.00005, betas=(0.5, 0.999))
 loss_fn = nn.MSELoss()
 calc_mean_cov = ClassCondLatentGen()
 
 for epoch in range(150):
+    print(epoch)
     loss_epoch = 0
     for img, labels in loader_train:
         img, labels = img.cuda(), labels.cuda()
 
         optimizer.zero_grad()
-        outputs = bagan_ae(img)
+        outputs = bagan_encoder(img)
+        outputs = bagan_decoder(outputs)
         loss = loss_fn(outputs, img)
         loss.backward()
         optimizer.step()
@@ -132,14 +125,16 @@ for epoch in range(150):
 
     print(loss_epoch/len(loader_train))
 
-calc_mean_cov.stacking(loader_train, bagan_ae)
+calc_mean_cov.stacking(loader_train, bagan_encoder)
 
-bagan = BAGAN(img_dim=img_dim, latent_dim=latent_dim, num_classes=num_classes).cuda()
-bagan.load_state_dict(bagan_ae.state_dict(), strict=False)
+bagan_generator = BaganGenerator(img_dim=img_dim, latent_dim=latent_dim).cuda()
+bagan_discriminator = BaganDiscriminator(img_dim=img_dim, latent_dim=latent_dim, num_classes=num_classes).cuda()
 
-optimizer_g = torch.optim.Adam([{'params': bagan.encoder.parameters()},
-                                {'params': bagan.adv.parameters()}], lr =0.00005, betas=(0.5, 0.999))
-optimizer_d = torch.optim.Adam(bagan.decoder.parameters(), lr =0.00005, betas=(0.5, 0.999))
+bagan_generator.load_state_dict(bagan_decoder.state_dict(), strict=False)
+bagan_discriminator.load_state_dict(bagan_encoder.state_dict(), strict=False)
+
+optimizer_g = torch.optim.Adam(bagan_generator.parameters(), lr =0.00005, betas=(0.5, 0.999))
+optimizer_d = torch.optim.Adam(bagan_discriminator.parameters(), lr =0.00005, betas=(0.5, 0.999))
 loss_fn = nn.CrossEntropyLoss()
 
 iter_train = iter(loader_train)
