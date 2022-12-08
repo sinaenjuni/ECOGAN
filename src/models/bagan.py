@@ -45,12 +45,12 @@ class BaganDiscriminator(nn.Module):
 
 class ClassCondLatentGen:
     def __init__(self):
-        self.latents=[]
-        self.targets=[]
-        self.mean={}
-        self.cov={}
-        self.num_classes:list
-        self.classes:list
+        self.latents: list
+        self.targets: list
+        self.mean: dict
+        self.cov: dict
+        self.num_classes: list
+        self.classes: list
     def stacking(self, data_loader, model):
         print("Stacking BAGAN AE features")
         model.eval()
@@ -77,9 +77,16 @@ class ClassCondLatentGen:
         return sample_latents
 
 
+
+
+
+
+
 import importlib
 from torchvision.transforms import Compose, ToTensor, Resize, Normalize, Lambda
 from torch.utils.data import DataLoader
+import wandb
+from argparse import ArgumentParser
 
 transforms = Compose([ToTensor(),
                       Resize(64),
@@ -247,4 +254,12 @@ with torch.no_grad():
 plt.imshow(gen.cpu().permute(1,2,0))
 plt.show()
 
+
+parser = ArgumentParser()
+parser.add_argument("--gpus", nargs='+', type=int, default=7, required=True)
+
+args = parser.parse_args()
+
+wandb.init(project="eval_cls", entity="sinaenjuni")
+wandb.config.update(args)
 
