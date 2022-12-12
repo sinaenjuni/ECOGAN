@@ -23,14 +23,12 @@ class BaganDecoder(nn.Module):
 
     def forward(self, img):
         return self.decoder(img)
-
 class BaganGenerator(nn.Module):
     def __init__(self, img_dim, latent_dim):
         super(BaganGenerator, self).__init__()
         self.decoder = Decoder(img_dim, latent_dim)
     def forward(self, latent):
         return self.decoder(latent)
-
 class BaganDiscriminator(nn.Module):
     def __init__(self, img_dim, latent_dim, num_classes):
         super(BaganDiscriminator, self).__init__()
@@ -42,11 +40,10 @@ class BaganDiscriminator(nn.Module):
         out = self.encoder(img)
         out = self.adv(out)
         return out
-
 class ClassCondLatentGen:
     def __init__(self):
-        self.latents: list
-        self.targets: list
+        self.latents = list()
+        self.targets = list()
         self.mean: dict
         self.cov: dict
         self.num_classes: list
@@ -75,9 +72,6 @@ class ClassCondLatentGen:
                                    for c in labels])
         sample_latents = torch.from_numpy(sample_latents)
         return sample_latents
-
-
-
 
 
 
@@ -134,6 +128,8 @@ for epoch in range(150):
 
 calc_mean_cov.stacking(loader_train, bagan_encoder)
 
+
+
 bagan_generator = BaganGenerator(img_dim=img_dim, latent_dim=latent_dim).cuda()
 bagan_discriminator = BaganDiscriminator(img_dim=img_dim, latent_dim=latent_dim, num_classes=num_classes).cuda()
 
@@ -145,12 +141,12 @@ optimizer_d = torch.optim.Adam(bagan_discriminator.parameters(), lr =0.00005, be
 loss_fn = nn.CrossEntropyLoss()
 
 iter_train = iter(loader_train)
-steps=100
+steps = 100
 for step in range(steps):
     try:
         img_real, label_real = next(iter_train)
     except StopIteration:
-        iter_train = iter(iter_train)
+        iter_train = iter(loader_train)
         img_real, label_real = next(iter_train)
 
     img_real, label_real = img_real.cuda(), label_real.cuda()
@@ -160,9 +156,9 @@ for step in range(steps):
     fake_label = (torch.ones_like(label_real) * num_classes).cuda()
 
     optimizer_d.zero_grad()
-    gen_img = bagan.get_generator(cond_latent).detach()
-    output_real = bagan.get_discriminator(img_real)
-    output_fake = bagan.get_discriminator(gen_img)
+    gen_img = bagan_generator(cond_latent).detach()
+    output_real = bagan_discriminator(img_real)
+    output_fake = bagan_discriminator(gen_img)
 
     loss_d = loss_fn(output_real, label_real) + loss_fn(output_fake, fake_label)
     loss_d.backward()
@@ -174,8 +170,8 @@ for step in range(steps):
     fake_label = torch.from_numpy(sample_labels).cuda()
 
     optimizer_g.zero_grad()
-    gen_img = bagan.get_generator(cond_latent)
-    output_fake = bagan.get_discriminator(gen_img)
+    gen_img = bagan_generator(cond_latent)
+    output_fake = bagan_discriminator(gen_img)
     loss_g = loss_fn(output_fake, fake_label)
     loss_g.backward()
     optimizer_g.step()
@@ -242,11 +238,16 @@ for step in range(steps):
 # return distrib.rsample((batch_size,))
 #
 #
+
+vis_label = torch.arange(0, 10).repeat(10)
+vis_z = calc_mean_cov.sampling(vis_label.numpy())
+
+
 from torchvision.utils import make_grid
 import matplotlib.pyplot as plt
 with torch.no_grad():
     # gen = bagan_ae.get_decoder(cond_latent.cuda())
-    gen = bagan.get_generator(cond_latent)
+    gen = bagan_generator(vis_z.cuda())
     # gen = torch.cat([gen, bagan_ae.get_decoder(distrib.rsample((100,)).cuda())])
     # gen = bagan_ae.get_decoder(distrib.rsample((100,)).cuda())
 
