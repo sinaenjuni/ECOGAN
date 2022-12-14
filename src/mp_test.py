@@ -78,7 +78,8 @@ def worker(rank, world_size):
     print(f"rank: {rank}, world_size: {world_size}")
     setup(rank, world_size)
 
-    run = wandb.init(project="eval_cls", entity="sinaenjuni")
+    if args.local_rank == 0:
+        wandb.init(project="eval_cls", entity="sinaenjuni")
 
 
     transforms = Compose([ToTensor(),
@@ -90,20 +91,25 @@ def worker(rank, world_size):
     dataset_train = getattr(dataset_module, 'CIFAR10_LT')(is_train=True, is_extension=False, transform=transforms)
     dataset_test = getattr(dataset_module, 'CIFAR10_LT')(is_train=False, is_extension=False, transform=transforms)
 
-    sampler_train = DistributedSampler(dataset_train, rank=rank, num_replicas=world_size, shuffle=True)
+
+    if world_size > 1:
+        sampler_train = DistributedSampler(dataset_train, rank=rank, num_replicas=world_size, shuffle=True)
+        sampler_test = DistributedSampler(dataset_test, rank=rank, num_replicas=world_size, shuffle=True)
+
     loader_train = DataLoader(dataset=dataset_train,
                               batch_size=128,
-                              sampler=sampler_train,
-                              num_workers=1,
+                              sampler=sampler_train if world_size > 1 else None,
+                              shuffle= not (world_size > 1),
+                              num_workers=8,
                               pin_memory=True,
                               persistent_workers=True)
     iter_train = iter(loader_train)
 
-    sampler_test = DistributedSampler(dataset_test, rank=rank, num_replicas=world_size, shuffle=True)
     loader_train = DataLoader(dataset=dataset_test,
                               batch_size=128,
-                              sampler=sampler_test,
-                              num_workers=1,
+                              sampler=sampler_test if world_size > 1 else None,
+                              shuffle=not(world_size > 1),
+                              num_workers=8,
                               pin_memory=True,
                               persistent_workers=True)
 
@@ -154,7 +160,7 @@ def worker(rank, world_size):
             acc_per_cls = conf_train.getAccuracyPerClass()
 
             print(acc)
-            run.log({f'acc/train{rank}': acc}, step=step+1)
+            wandb.log({f'acc/train{rank}': acc}, step=step+1)
             # print({cls: f"{val:.2f}" for cls, val in zip(range(len(acc_per_cls)), acc_per_cls)})
             conf_train.reset()
             loss_train = []
@@ -187,7 +193,7 @@ def worker(rank, world_size):
 
 def load_configs_init():
     parser = ArgumentParser()
-    parser.add_argument("--gpus", nargs='+', type=int, default=7, required=True)
+    parser.add_argument("--gpus", nargs='+', default=[1], type=int, required=False)
 
     args = parser.parse_args()
     # cfgs = vars(args)
@@ -240,9 +246,6 @@ if __name__ == "__main__":
     # run = wandb.init(project="eval_cls", entity="sinaenjuni")
 
     if len(args.gpus) > 1:
-        # gpus = [1,2,3,4,5]
-        # os.environ["CUDA_VISIBLE_DEVICES"] = ", ".join(map(str, gpus))
-
         mp.set_start_method("spawn", force=True)
         print("Train the models through DistributedDataParallel (DDP) mode.")
         ctx = torch.multiprocessing.spawn(fn=worker,

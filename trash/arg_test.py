@@ -8,7 +8,9 @@ parser.add_argument("--gpus", nargs='+', type=int, default=7, required=True)
 args = parser.parse_args()
 
 print(parser)
+
 print(args.gpus)
+print(args)
 
 wandb.init(project="eval_cls", entity="sinaenjuni")
 wandb.config.update(args)
