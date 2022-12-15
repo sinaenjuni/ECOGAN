@@ -1,38 +1,3 @@
-# from tqdm import tqdm
-# import torch.multiprocessing as mp
-#
-#
-# def get_train_batch():
-#     try:
-#         img, label = next(iter_train)
-#     except StopIteration:
-#         iter_train = iter(loader_train)
-#         img, label = next(iter_train)
-#
-#     return img, label
-#
-#
-# def worker():
-#     transforms = Compose([ToTensor(),
-#                           Resize(32),
-#                           Normalize(mean=[0.5, 0.5, 0.5],
-#                                     std=[0.5, 0.5, 0.5])])
-#
-    # dataset_module = importlib.import_module('utils.datasets')
-    # dataset_train = getattr(dataset_module, 'CIFAR10_LT')(is_train=True, is_extension=False, transform=transforms)
-    # dataset_test = getattr(dataset_module, 'CIFAR10_LT')(is_train=False, is_extension=False, transform=transforms)
-    #
-    # loader_train = DataLoader(dataset=dataset_train, batch_size=128, shuffle=True)
-#
-#     loader_train = loader_train
-#     iter_train = iter(loader_train)
-#
-#     for i in tqdm(range(1000)):
-#         worker.get_train_batch()
-#
-#
-# worker()
-
 import os
 import torch
 import torch.nn as nn
@@ -53,25 +18,7 @@ import numpy as np
 import wandb
 from argparse import ArgumentParser
 from utils.misc import GatherLayer
-
-class ConfusionMatrix:
-    def __init__(self, num_classes):
-        self.num_classes = num_classes
-        self.confmat = np.zeros((num_classes, num_classes))
-        self.minlength = num_classes**2
-    def update(self, target, pred):
-        assert len(target) == len(pred)
-        unique_mapping = target.reshape(-1) * self.num_classes + pred.reshape(-1)
-        bins = np.bincount(unique_mapping, minlength=self.minlength)
-        self.confmat += bins.reshape(self.num_classes, self.num_classes)
-    def getConfusionMactrix(self):
-        return self.confmat
-    def getAccuracy(self):
-        return np.nan_to_num(self.confmat.trace() / self.confmat.sum())
-    def getAccuracyPerClass(self):
-        return np.nan_to_num(self.confmat.diagonal() / self.confmat.sum(1))
-    def reset(self):
-        self.confmat = np.zeros((self.num_classes, self.num_classes))
+from metric.inception_net_V2 import EvalModel
 
 
 
@@ -114,84 +61,87 @@ def worker(rank, world_size):
                               pin_memory=True,
                               persistent_workers=True)
 
+    eval_model = EvalModel().to(rank)
+    # eval_model.eval()
+    ddp_model = DDP(eval_model, device_ids=[rank])
+    ddp_model.eval()
 
-    model_module = importlib.import_module('torchvision.models.resnet')
-    model = getattr(model_module, 'resnet18')(num_classes=10).to(rank)
-    ddp_model = DDP(model, device_ids=[rank])
+    real_feature = []
+    real_logit = []
+    for idx, (img, labels) in enumerate(loader_train):
+        print(idx)
+        img, labels = img.to(rank), labels.to(rank)
 
-    # loss_fn = nn.MSELoss()
-    loss_fn = nn.CrossEntropyLoss()
-    optimizer = optim.SGD(ddp_model.parameters(), lr=0.001)
+        with torch.no_grad():
+            feature, logit = ddp_model.module.get_outputs(img, quantize=True)
+            logit = torch.nn.functional.softmax(logit, dim=1)
+            real_feature.append(feature)
+            real_logit.append(logit)
 
-
-    loss_train = []
-    loss_test = []
-    # loss_train_append = loss_train.append
-    # loss_test_append = loss_test.append
-
-
-
-    conf_train = ConfusionMatrix(10)
-    conf_test = ConfusionMatrix(10)
-
-
-    feat = []
-    for step in range(100):
-        try:
-            img, labels = next(iter_train)
-            img, labels = img.to(rank), labels.to(rank)
-        except StopIteration:
-            iter_train = iter(loader_train)
-            img, labels = next(iter_train)
-            img, labels = img.to(rank), labels.to(rank)
-
-        ddp_model.train()
-        optimizer.zero_grad()
-        outputs = ddp_model(img)
-        loss = loss_fn(outputs, labels)
-        loss.backward()
-        optimizer.step()
-        loss_train.append(loss)
-        conf_train.update(labels.cpu(), F.softmax(outputs, dim=1).argmax(1).cpu())
-
-        feat.append(outputs)
-
-        print(step, torch.stack(loss_train).mean())
-
-        if (step+1) % 10 == 0:
-            acc = conf_train.getAccuracy()
-            acc_per_cls = conf_train.getAccuracyPerClass()
-
-            print(acc)
-            # wandb.log({f'acc/train{rank}': acc}, step=step+1)
-            # print({cls: f"{val:.2f}" for cls, val in zip(range(len(acc_per_cls)), acc_per_cls)})
-            conf_train.reset()
-            loss_train = []
-
-            for idx, (img, labels) in enumerate(loader_train):
-                print(idx)
-                img, labels = img.to(rank), labels.to(rank)
-                ddp_model.eval()
-                outputs = ddp_model(img)
-                loss = loss_fn(outputs, labels)
-                loss_test.append(loss)
-                conf_test.update(labels.cpu(), F.softmax(outputs, dim=1).argmax(1).cpu())
-
-            acc = conf_test.getAccuracy()
-            acc_per_cls = conf_test.getAccuracyPerClass()
+    real_feature = torch.cat(real_feature)
+    real_feature = torch.cat(GatherLayer.apply(real_feature), dim=0)
+    print(real_feature.size())
 
 
-            print(step, torch.stack(loss_test).mean())
-            print(acc)
-            # print({cls: f"{val:.2f}" for cls, val in zip(range(len(acc_per_cls)), acc_per_cls)})
-            conf_test.reset()
-            loss_test = []
 
-        # print(outputs.argmax(1))
 
-    feat = torch.cat(feat)
-    feat = torch.cat(GatherLayer.apply(feat), dim=0)
-    print(feat.size())
+    #
+    # for step in range(100):
+    #     try:
+    #         img, labels = next(iter_train)
+    #         img, labels = img.to(rank), labels.to(rank)
+    #     except StopIteration:
+    #         iter_train = iter(loader_train)
+    #         img, labels = next(iter_train)
+    #         img, labels = img.to(rank), labels.to(rank)
+    #
+    #     ddp_model.train()
+    #     optimizer.zero_grad()
+    #     outputs = ddp_model(img)
+    #     loss = loss_fn(outputs, labels)
+    #     loss.backward()
+    #     optimizer.step()
+    #     loss_train.append(loss)
+    #     conf_train.update(labels.cpu(), F.softmax(outputs, dim=1).argmax(1).cpu())
+    #
+    #     feat.append(outputs)
+    #
+    #     print(step, torch.stack(loss_train).mean())
+    #
+    #     if (step+1) % 10 == 0:
+    #         acc = conf_train.getAccuracy()
+    #         acc_per_cls = conf_train.getAccuracyPerClass()
+    #
+    #         print(acc)
+    #         # wandb.log({f'acc/train{rank}': acc}, step=step+1)
+    #         # print({cls: f"{val:.2f}" for cls, val in zip(range(len(acc_per_cls)), acc_per_cls)})
+    #         conf_train.reset()
+    #         loss_train = []
+    #
+    #         for idx, (img, labels) in enumerate(loader_train):
+    #             print(idx)
+    #             img, labels = img.to(rank), labels.to(rank)
+    #             ddp_model.eval()
+    #             outputs = ddp_model(img)
+    #             loss = loss_fn(outputs, labels)
+    #             loss_test.append(loss)
+    #             conf_test.update(labels.cpu(), F.softmax(outputs, dim=1).argmax(1).cpu())
+    #
+    #         acc = conf_test.getAccuracy()
+    #         acc_per_cls = conf_test.getAccuracyPerClass()
+    #
+    #
+    #         print(step, torch.stack(loss_test).mean())
+    #         print(acc)
+    #         # print({cls: f"{val:.2f}" for cls, val in zip(range(len(acc_per_cls)), acc_per_cls)})
+    #         conf_test.reset()
+    #         loss_test = []
+    #
+    #     # print(outputs.argmax(1))
+    #
+    # feat = torch.cat(feat)
+    # feat = torch.cat(GatherLayer.apply(feat), dim=0)
+    # print(feat.size())
 
     cleanup()
 

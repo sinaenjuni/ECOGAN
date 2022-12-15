@@ -6,7 +6,8 @@ from torch.utils.data import DataLoader
 import wandb
 from argparse import ArgumentParser
 import numpy as np
-
+from utils import misc
+from datetime import datetime
 
 transforms = Compose([ToTensor(),
                       Resize(64),
@@ -20,7 +21,7 @@ dataset_train = getattr(dataset_module, 'FashionMNIST_LT')(is_train=True, is_ext
 loader_train = DataLoader(dataset=dataset_train,
                           batch_size=128,
                           shuffle=True,
-                          num_workers=1,
+                          num_workers=8,
                           pin_memory=True,
                           persistent_workers=True)
 
@@ -38,8 +39,9 @@ optimizer = torch.optim.Adam([{'params': encoder.parameters(),
 loss_fn = nn.MSELoss()
 calc_mean_cov = getattr(models_module, 'ClassCondLatentGen')()
 
+start_time = datetime.now()
 steps_ae = 15000
-loss_ae = 0
+vis_loss_ae = 0
 
 iter_train = iter(loader_train)
 for steps in range(steps_ae):
@@ -59,12 +61,13 @@ for steps in range(steps_ae):
     loss.backward()
     optimizer.step()
     # print(loss.item())
-    loss_ae += loss.item()
+    vis_loss_ae += loss.item()
 
     if (steps+1) % 100 == 0:
         print(f'steps: {steps+1}/{steps_ae}({((steps+1) / steps_ae)*100:.2f}%), '
-              f'loss: {loss_ae / 100:.4f}')
-        loss_ae = 0
+              f'time: {misc.elapsed_time(start_time)} '
+              f'loss: {vis_loss_ae / 100:.4f}')
+        vis_loss_ae = 0
 
 calc_mean_cov.stacking(loader_train, encoder)
 
@@ -79,9 +82,14 @@ optimizer_g = torch.optim.Adam(generator.parameters(),     lr=0.00005, betas=(0.
 optimizer_d = torch.optim.Adam(discriminator.parameters(), lr=0.00005, betas=(0.5, 0.999))
 loss_fn = nn.CrossEntropyLoss()
 
+start_time = datetime.now()
+vis_loss_g = 0
+vis_loss_d = 0
+
 iter_train = iter(loader_train)
-steps = 100
-for step in range(steps):
+steps_gan = 1000
+for steps in range(steps_gan):
+    print(steps)
     try:
         img_real, label_real = next(iter_train)
     except StopIteration:
@@ -102,6 +110,7 @@ for step in range(steps):
     loss_d = loss_fn(output_real, label_real) + loss_fn(output_fake, fake_label)
     loss_d.backward()
     optimizer_d.step()
+    vis_loss_d += loss_d
 
     ###########################
     sample_labels = np.random.randint(0, 10, label_real.size(0))
@@ -114,8 +123,26 @@ for step in range(steps):
     loss_g = loss_fn(output_fake, fake_label)
     loss_g.backward()
     optimizer_g.step()
+    vis_loss_g += loss_g
 
-    print(loss_d.item(), loss_g.item())
+    if (steps + 1) % 100 == 0:
+        print(f'steps: {steps+1}/{steps_gan}({((steps+1) / steps_gan)*100:.2f}%), '
+              f'time: {misc.elapsed_time(start_time)}, '
+              f'loss_d: {vis_loss_d / 100:.4f}, '
+              f'loss_g: {vis_loss_g / 100:.4f}')
+        vis_loss_d = 0
+        vis_loss_g = 0
+
+
+
+from metric.inception_net_V2 import EvalModel
+
+
+eval_model = EvalModel()
+eval_model.eval()
+
+
+for img, labels in loader_train:
 
 
 
