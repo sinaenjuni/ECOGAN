@@ -58,7 +58,7 @@ class EvalModel(nn.Module):
                                     model_names[self.eval_backbone],
                                     pretrained=True)
         # self.model.eval()
-        # self.model = self.model.to(self.device)
+        self.model = self.model.to(self.device)
         hook_handles = []
         for name, layer in self.model.named_children():
             if name == "fc":
