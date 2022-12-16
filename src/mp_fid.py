@@ -61,10 +61,11 @@ def worker(rank, world_size):
                               pin_memory=True,
                               persistent_workers=True)
 
-    eval_model = EvalModel().to(rank)
+    eval_model = EvalModel(world_size=world_size, device=rank)
+    eval_model.eval()
     # eval_model.eval()
-    ddp_model = DDP(eval_model, device_ids=[rank])
-    ddp_model.eval()
+    # ddp_model = DDP(eval_model, device_ids=[rank])
+    # ddp_model.eval()
 
     real_feature = []
     real_logit = []
@@ -73,7 +74,7 @@ def worker(rank, world_size):
         img, labels = img.to(rank), labels.to(rank)
 
         with torch.no_grad():
-            feature, logit = ddp_model.module.get_outputs(img, quantize=True)
+            feature, logit = eval_model.get_outputs(img, quantize=True)
             logit = torch.nn.functional.softmax(logit, dim=1)
             real_feature.append(feature)
             real_logit.append(logit)

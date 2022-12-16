@@ -3,6 +3,7 @@ import torch.nn as nn
 import torch.nn.functional as F
 import numpy as np
 from torchvision.transforms import ToTensor
+from torch.nn.parallel import DistributedDataParallel as DDP
 
 class SaveOutput:
     def __init__(self):
@@ -44,8 +45,9 @@ model_names = {"InceptionV3_torch": "inception_v3",
                "SwAV_torch": "resnet50"}
 
 class EvalModel(nn.Module):
-    def __init__(self):
+    def __init__(self, world_size, device):
         super(EvalModel, self).__init__()
+        self.device = device
         self.eval_backbone = 'InceptionV3_torch'
 
         mean, std = [0.485, 0.456, 0.406], [0.229, 0.224, 0.225]
@@ -67,11 +69,12 @@ class EvalModel(nn.Module):
         self.totensor = ToTensor()
         self.mean = torch.Tensor(mean).view(1, 3, 1, 1)
         self.std = torch.Tensor(std).view(1, 3, 1, 1)
-    #
-    #     self.eval()
-    #
-    # def eval(self):
-    #     self.model.eval()
+
+        if world_size > 1:
+            self.model = DDP(self.model,
+                             device_ids=[self.device])
+    def eval(self):
+        self.model.eval()
 
     def get_outputs(self, inputs, quantize=False):
         if quantize:
