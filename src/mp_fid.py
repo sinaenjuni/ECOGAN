@@ -17,8 +17,11 @@ from tqdm import tqdm
 import numpy as np
 import wandb
 from argparse import ArgumentParser
-from utils.misc import GatherLayer
+
 from metric.inception_net_V2 import EvalModel
+from metric.fid import calculate_mu_sigma, frechet_inception_distance
+from metric.ins import calculate_inception_score
+
 
 
 
@@ -63,26 +66,13 @@ def worker(rank, world_size):
 
     eval_model = EvalModel(world_size=world_size, device=rank)
     eval_model.eval()
-    # eval_model.eval()
-    # ddp_model = DDP(eval_model, device_ids=[rank])
-    # ddp_model.eval()
+    
+    real_feature, real_logit = eval_model.stacking_feature(loader_train)
+    mu_real, sigma_real = calculate_mu_sigma(real_feature.cpu().numpy())
+    
+    
 
-    real_feature = []
-    real_logit = []
-    for idx, (img, labels) in enumerate(loader_train):
-        print(idx)
-        img, labels = img.to(rank), labels.to(rank)
-
-        with torch.no_grad():
-            feature, logit = eval_model.get_outputs(img, quantize=True)
-            logit = torch.nn.functional.softmax(logit, dim=1)
-            real_feature.append(feature)
-            real_logit.append(logit)
-
-    real_feature = torch.cat(real_feature)
-    real_feature = torch.cat(GatherLayer.apply(real_feature), dim=0)
-    print(real_feature.size())
-
+    fid = frechet_inception_distance(mu_real, sigma_real, mu_real, sigma_real)
 
 
 

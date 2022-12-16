@@ -4,6 +4,7 @@ import torch.nn.functional as F
 import numpy as np
 from torchvision.transforms import ToTensor
 from torch.nn.parallel import DistributedDataParallel as DDP
+from utils.misc import GatherLayer
 
 class SaveOutput:
     def __init__(self):
@@ -48,6 +49,7 @@ class EvalModel(nn.Module):
     def __init__(self, world_size, device):
         super(EvalModel, self).__init__()
         self.device = device
+        self.world_size = world_size
         self.eval_backbone = 'InceptionV3_torch'
 
         mean, std = [0.485, 0.456, 0.406], [0.229, 0.224, 0.225]
@@ -70,7 +72,7 @@ class EvalModel(nn.Module):
         self.mean = torch.Tensor(mean).view(1, 3, 1, 1)
         self.std = torch.Tensor(std).view(1, 3, 1, 1)
 
-        if world_size > 1:
+        if self.world_size > 1:
             self.model = DDP(self.model,
                              device_ids=[self.device])
     def eval(self):
@@ -98,6 +100,28 @@ class EvalModel(nn.Module):
         return repres, logits
 
 
+
+    def stacking_feature(self, data_loader):
+        features = []
+        logits = []
+        for img, labels in data_loader:
+            img, labels = img.to(self.device), labels.to(self.device)
+
+            with torch.no_grad():
+                feature, logit = self.get_outputs(img, quantize=True)
+                logit = torch.nn.functional.softmax(logit, dim=1)
+                features.append(feature)
+                logits.append(logit)
+
+        features = torch.cat(features)
+        logits = torch.cat(logits)
+        if self.world_size > 1:
+            features = torch.cat(GatherLayer.apply(features), dim=0)
+            logits = torch.cat(GatherLayer.apply(logits), dim=0)
+        return features, logits
+
+    
+    
 
 
 if __name__ == "__main__":
