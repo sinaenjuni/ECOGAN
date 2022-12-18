@@ -113,15 +113,14 @@ class EvalModel(nn.Module):
                 features.append(feature)
                 logits.append(logit)
 
-        features = torch.cat(features)
-        logits = torch.cat(logits)
+        features = torch.cat(features, dim=0)
+        logits = torch.cat(logits, dim=0)
         if self.world_size > 1:
             features = torch.cat(GatherLayer.apply(features), dim=0)
             logits = torch.cat(GatherLayer.apply(logits), dim=0)
         return features, logits
 
-    
-    
+
 
 
 if __name__ == "__main__":

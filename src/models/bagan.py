@@ -4,6 +4,11 @@ import torch.nn as nn
 import torch.nn.functional as F
 from models.base import Decoder as BaseDecoder, Encoder as BaseEncoder
 from torch.distributions.multivariate_normal import MultivariateNormal
+from torch.nn.parallel import DistributedDataParallel as DDP
+
+from datetime import datetime
+from utils import misc
+
 
 
 class Encoder(nn.Module):
@@ -16,7 +21,6 @@ class Encoder(nn.Module):
         out = self.encoder(img)
         out = self.linear(out)
         return out
-
 class Decoder(nn.Module):
     def __init__(self, img_dim, latent_dim):
         super(Decoder, self).__init__()
@@ -41,8 +45,6 @@ class Discriminator(nn.Module):
         out = self.encoder(img)
         out = self.adv(out)
         return out
-
-
 class ClassCondLatentGen:
     def __init__(self):
         self.latents = list()
@@ -77,4 +79,46 @@ class ClassCondLatentGen:
         return sample_latents
 
 
+def pre_training(data_loader, logger, world_size, device, args):
+    encoder = Encoder(img_dim=args.img_dim, latent_dim=args.latent_dim).to(device)
+    decoder = Decoder(img_dim=args.img_dim, latent_dim=args.latent_dim).to(device)
+    
+    if world_size > 1:
+       encoder = DDP(encoder, device_ids=[device])
+       decoder = DDP(decoder, device_dis=[device]) 
+        
+    optimizer = torch.optim.Adam([{'params': encoder.parameters(),
+                                   'params': decoder.parameters()}], 
+                                 lr=args.lr, 
+                                 betas=(args.beta1, args.beta2))
+    loss_fn = nn.MSELoss()
+    
+    start_time = datetime.now()
+    losses = 0
+    for epoch in range(args.epoch_ae):
+        for img, label in data_loader:
+            img, label = img.to(device), label.to(device)
+           
+            optimizer.zero_grad()
+            outputs = encoder(img)
+            outputs = decoder(outputs)
+            loss = loss_fn(outputs, img)
+            loss.backward()
+            optimizer.step()
+            losses += loss.item()
 
+
+        losses = losses / len(data_loader)
+        print(f'epoch: {epoch+1}/{args.epoch_ae}({((epoch+1) / args.epoch_ae)*100:.2f}%), '
+                f'time: {misc.elapsed_time(start_time)}, '
+                f'loss: {losses:.4f}')
+        logger.log({'loss/ae':losses})
+        losses = 0
+
+    return encoder, decoder
+
+
+def gan_training(data_loader, logger, world_size, device, args):
+    
+    if args.pre_traning:
+        pre_training(data_loader, logger, world_size, device, args)

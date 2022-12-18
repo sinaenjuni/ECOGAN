@@ -1,0 +1,4 @@
+Traceback (most recent call last):
+  File "./src/training.py", line 35, in <module>
+    encoder, decoder = getattr(model_module, 'pre_training')(loader_train, logger, world_size, rank, args)
+NameError: name 'world_size' is not defined

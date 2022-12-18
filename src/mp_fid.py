@@ -22,7 +22,8 @@ from metric.inception_net_V2 import EvalModel
 from metric.fid import calculate_mu_sigma, frechet_inception_distance
 from metric.ins import calculate_inception_score
 
-
+from metric.ins import calculate_kl_div
+from metric.fid import calculate_mu_sigma, frechet_inception_distance
 
 
 def worker(rank, world_size):
@@ -73,7 +74,8 @@ def worker(rank, world_size):
     
 
     fid = frechet_inception_distance(mu_real, sigma_real, mu_real, sigma_real)
-
+    ins = calculate_kl_div(ps_list=real_logit)[0]
+    print(fid, ins)
 
 
     #

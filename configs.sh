@@ -1,0 +1,1 @@
+python3 ./src/training.py --gpus 1 2 --img_dim 3 --latent_dim 128 --epoch_ae 150 --lr 0.00005 --beta1 0.5 --beta2 0.999 
