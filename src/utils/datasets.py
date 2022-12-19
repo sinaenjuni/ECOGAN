@@ -40,10 +40,15 @@ class MyDataset(Dataset):
     def __getitem__(self, idx):
         assert self.num_ori != 0, "num_ori is zero"
         idx = idx % self.num_ori
-        image = Image.open(self.data[idx])
+        image = Image.open(self.data[idx]).convert('RGB')
         target = self.targets[idx]
         if self.transform is not None:
             image = self.transform(image)
+            
+        # if image.size(0) == 1:
+            # image = image.repeat(3,1,1)
+        # Lambda(lambda x : x.repeat(3, 1, 1) if x.size(0) == 1 else x),
+        
         return image, target
 
 class CIFAR10_LT(MyDataset):

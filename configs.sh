@@ -1,1 +1,14 @@
-python3 ./src/training.py --gpus 1 2 --img_dim 3 --latent_dim 128 --epoch_ae 150 --lr 0.00005 --beta1 0.5 --beta2 0.999 
+/home/dblab/.conda/envs/VAE-BGAN/bin/python ./src/training.py \
+--model bagan \
+--gpus 1 2 \
+--data_name FashionMNIST_LT \
+--path save_files/ \
+--epoch_ae 1 \
+--steps 10 \
+--logger false \
+--img_dim 3 \
+--latent_dim 128 \
+--lr 0.00005 \
+--beta1 0.5 \
+--beta2 0.999 \
+--batch_size 128 \

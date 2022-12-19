@@ -1,0 +1,37 @@
+Process SpawnProcess-1:
+Traceback (most recent call last):
+  File "/home/dblab/.conda/envs/VAE-BGAN/lib/python3.7/site-packages/torch/multiprocessing/spawn.py", line 69, in _wrap
+    fn(i, *args)
+  File "/home/dblab/git/ECOGAN/src/training.py", line 47, in worker
+    encoder, decoder = getattr(model_module, 'pre_training')(loader_train, logger, world_size=world_size, device=rank, args=args)
+  File "/home/dblab/git/ECOGAN/src/models/bagan.py", line 87, in pre_training
+    encoder = DDP(encoder, device_ids=[device])
+  File "/home/dblab/.conda/envs/VAE-BGAN/lib/python3.7/site-packages/torch/nn/parallel/distributed.py", line 593, in __init__
+    self.process_group = _get_default_group()
+  File "/home/dblab/.conda/envs/VAE-BGAN/lib/python3.7/site-packages/torch/distributed/distributed_c10d.py", line 430, in _get_default_group
+    "Default process group has not been initialized, "
+RuntimeError: Default process group has not been initialized, please make sure to call init_process_group.
+During handling of the above exception, another exception occurred:
+Traceback (most recent call last):
+  File "/home/dblab/.conda/envs/VAE-BGAN/lib/python3.7/multiprocessing/process.py", line 297, in _bootstrap
+    self.run()
+  File "/home/dblab/.conda/envs/VAE-BGAN/lib/python3.7/multiprocessing/process.py", line 99, in run
+    self._target(*self._args, **self._kwargs)
+  File "/home/dblab/.conda/envs/VAE-BGAN/lib/python3.7/site-packages/torch/multiprocessing/spawn.py", line 76, in _wrap
+    sys.exit(1)
+  File "/home/dblab/.conda/envs/VAE-BGAN/lib/python3.7/site-packages/wandb/sdk/lib/exit_hooks.py", line 38, in exit
+    self._orig_exit(orig_code)
+SystemExit: 1
+During handling of the above exception, another exception occurred:
+Traceback (most recent call last):
+  File "/home/dblab/.conda/envs/VAE-BGAN/lib/python3.7/multiprocessing/process.py", line 300, in _bootstrap
+    util._exit_function()
+  File "/home/dblab/.conda/envs/VAE-BGAN/lib/python3.7/multiprocessing/util.py", line 357, in _exit_function
+    p.join()
+  File "/home/dblab/.conda/envs/VAE-BGAN/lib/python3.7/multiprocessing/process.py", line 140, in join
+    res = self._popen.wait(timeout)
+  File "/home/dblab/.conda/envs/VAE-BGAN/lib/python3.7/multiprocessing/popen_fork.py", line 48, in wait
+    return self.poll(os.WNOHANG if timeout == 0.0 else 0)
+  File "/home/dblab/.conda/envs/VAE-BGAN/lib/python3.7/multiprocessing/popen_fork.py", line 28, in poll
+    pid, sts = os.waitpid(self.pid, flag)
+KeyboardInterrupt

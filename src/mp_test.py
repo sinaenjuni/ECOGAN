@@ -61,6 +61,7 @@ def worker(rank, world_size):
 
     if rank == 0:
         logger = wandb.init(project="eval_cls", entity="sinaenjuni")
+        logger.config.update(args)
 
 
     transforms = Compose([ToTensor(),
