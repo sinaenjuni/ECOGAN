@@ -20,8 +20,10 @@ from torchvision.transforms import Compose, ToTensor, Resize, Normalize, Lambda
 def worker(rank, world_size, args):
     print(f"rank: {rank}, world_size: {world_size}")
     if world_size > 1:
-        setup(rank, world_size)
-
+        misc.setup(rank, world_size)
+        misc.fix_seed(rank)
+        args.batch_size = args.batch_size//world_size
+        
     if rank==0 and args.logger:
         logger = wandb.init(project="eval_cls", entity="sinaenjuni")
     else:
@@ -56,28 +58,14 @@ def worker(rank, world_size, args):
 
     # print("@@@@@", model_module)
  
-    # cleanup()
+    misc.cleanup()
 
 
 
-def setup(rank, world_size, backend="nccl"):
-    os.environ['MASTER_ADDR'] = 'localhost'
-    os.environ['MASTER_PORT'] = '12355'
 
-    # initialize the process group
-    dist.init_process_group(backend=backend,
-                            rank=rank,
-                            # init_method='env://',
-                            world_size=world_size)
 
-    torch.cuda.set_device(rank)
-    torch.cuda.empty_cache()
-    # setup_for_distributed(rank == 0) # 특정 rank에서만 print 허용
 
-def cleanup():
-    dist.destroy_process_group()
-    
-    
+
 if __name__ == "__main__":
     #
     # print(gpus_per_node, rank)
@@ -88,6 +76,7 @@ if __name__ == "__main__":
     print(args)
     
     os.environ["CUDA_VISIBLE_DEVICES"] = ", ".join(map(str, args.gpus))
+    # os.environ['PYTHONWARNINGS'] = 'ignore:semaphore_tracker:UserWarning'
     world_size = len(args.gpus)
 
     if world_size > 1:

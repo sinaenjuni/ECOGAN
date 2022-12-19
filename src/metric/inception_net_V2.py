@@ -104,10 +104,10 @@ class EvalModel(nn.Module):
     def stacking_feature(self, data_loader):
         features = []
         logits = []
-        for img, labels in data_loader:
-            img, labels = img.to(self.device), labels.to(self.device)
+        with torch.no_grad():
+            for img, labels in data_loader:
+                img, labels = img.to(self.device), labels.to(self.device)
 
-            with torch.no_grad():
                 feature, logit = self.get_outputs(img, quantize=True)
                 logit = torch.nn.functional.softmax(logit, dim=1)
                 features.append(feature)

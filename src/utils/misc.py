@@ -1,3 +1,6 @@
+import os
+import random
+import numpy as np
 from argparse import ArgumentTypeError
 from datetime import datetime
 import torch
@@ -65,3 +68,50 @@ class GatherLayer(torch.autograd.Function):
         grad_out = torch.zeros_like(input)
         grad_out[:] = grads[dist.get_rank()]
         return grad_out
+    
+    
+    
+def cleanup():
+    dist.destroy_process_group()
+    
+def fix_seed(seed):
+    random.seed(seed)
+    torch.manual_seed(seed)
+    torch.cuda.manual_seed_all(seed)
+    torch.cuda.manual_seed(seed)
+    np.random.seed(seed)    
+    
+
+def setup(rank, world_size, backend="nccl"):
+    os.environ['MASTER_ADDR'] = 'localhost'
+    os.environ['MASTER_PORT'] = '12355'
+
+    # initialize the process group
+    # dist.init_process_group(backend=backend,
+    #                         rank=rank,
+    #                         # init_method='env://',
+    #                         world_size=world_size)
+    dist.init_process_group(backend=backend,
+                                init_method="env://",
+                                rank=rank,
+                                world_size=world_size)
+
+    torch.cuda.set_device(rank)
+    torch.cuda.empty_cache()
+    setup_for_distributed(rank == 0) # 특정 rank에서만 print 허용
+    
+    
+
+def setup_for_distributed(is_master):
+    """
+    This function disables printing when not in master process
+    """
+    import builtins as __builtin__
+    builtin_print = __builtin__.print
+
+    def print(*args, **kwargs):
+        force = kwargs.pop('force', False)
+        if is_master or force:
+            builtin_print(*args, **kwargs)
+    __builtin__.print = print
+    

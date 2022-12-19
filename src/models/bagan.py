@@ -9,7 +9,10 @@ from torch.nn.parallel import DistributedDataParallel as DDP
 
 from datetime import datetime
 from utils import misc
-
+from metric.inception_net_V2 import EvalModel
+from metric.fid import calculate_mu_sigma, frechet_inception_distance
+from metric.ins import calculate_kl_div
+from utils.misc import GatherLayer
 
 
 class Encoder(nn.Module):
@@ -46,15 +49,17 @@ class Discriminator(nn.Module):
         out = self.adv(out)
         return out
 class ClassCondLatentGen:
-    def __init__(self):
+    def __init__(self, rank):
         self.latents = list()
         self.targets = list()
         self.mean: dict
         self.cov: dict
         self.num_classes: list
         self.classes: list
+        self.rank=rank
     def stacking(self, data_loader, model):
-        print("Stacking BAGAN AE features")
+        if self.rank==0:
+            print("Stacking BAGAN AE features")
         model.eval()
         for img, labels in data_loader:
             img, labels = img.cuda(), labels.cuda()
@@ -70,7 +75,8 @@ class ClassCondLatentGen:
         latents_np_cls = {c: latents_np[np.where(targets_np == c)] for c in self.classes}
         self.mean = {c: np.mean(e, axis=0) for c, e in latents_np_cls.items()}
         self.cov = {c: np.cov(e.T) for c, e in latents_np_cls.items()}
-        print("Finish stacking BAGAN AE features")
+        if self.rank==0:
+            print("Finish stacking BAGAN AE features")
 
     def sampling(self, labels):
         sample_latents = np.stack([np.random.multivariate_normal(self.mean[c], self.cov[c]).astype(np.float32)
@@ -83,12 +89,11 @@ def pre_training(data_loader, logger, world_size, rank, args):
     encoder = Encoder(img_dim=args.img_dim, latent_dim=args.latent_dim).to(rank)
     decoder = Decoder(img_dim=args.img_dim, latent_dim=args.latent_dim).to(rank)
     
-    encoder = torch.nn.SyncBatchNorm.convert_sync_batchnorm(encoder)
-    decoder = torch.nn.SyncBatchNorm.convert_sync_batchnorm(decoder)
-    
     if world_size > 1:
-       encoder = DDP(encoder, device_ids=[rank])
-       decoder = DDP(decoder, device_ids=[rank]) 
+        encoder = torch.nn.SyncBatchNorm.convert_sync_batchnorm(encoder)
+        decoder = torch.nn.SyncBatchNorm.convert_sync_batchnorm(decoder)
+        encoder = DDP(encoder, device_ids=[rank])
+        decoder = DDP(decoder, device_ids=[rank]) 
         
     optimizer = torch.optim.Adam([{'params': encoder.parameters(),
                                    'params': decoder.parameters()}], 
@@ -98,6 +103,9 @@ def pre_training(data_loader, logger, world_size, rank, args):
     
     start_time = datetime.now()
     losses = 0
+    best_losses = float("inf")
+    best_encoder = None
+    best_decoder = None
     for epoch in range(args.epoch_ae):
         for img, label in data_loader:
             img, label = img.to(rank), label.to(rank)
@@ -111,15 +119,19 @@ def pre_training(data_loader, logger, world_size, rank, args):
             losses += loss.item()
 
         losses = losses / len(data_loader)
-        if rank == 0:
-            print(f'epoch: {epoch+1}/{args.epoch_ae}({((epoch+1) / args.epoch_ae)*100:.2f}%), '
-                    f'time: {misc.elapsed_time(start_time)}, '
-                    f'loss: {losses:.4f}')
+        print(f'epoch: {epoch+1}/{args.epoch_ae}({((epoch+1) / args.epoch_ae)*100:.2f}%), '
+                f'time: {misc.elapsed_time(start_time)}, '
+                f'loss: {losses:.4f}')
         if logger is not None:
             logger.log({'loss/ae':losses})
+        if best_losses > losses:
+            best_decoder = decoder
+            best_encoder = encoder
+            best_losses = losses
         losses = 0
-
-    return encoder, decoder
+        
+    print(f"[Best ae] epoch: {epoch+1}, loss: {best_losses}")
+    return best_encoder, best_decoder
 
 
 def gan_training(data_loader, logger, world_size, rank, args):
@@ -129,13 +141,27 @@ def gan_training(data_loader, logger, world_size, rank, args):
     G = Generator(args.img_dim, latent_dim=args.latent_dim).to(rank)
     D = Discriminator(img_dim=args.img_dim, latent_dim=args.latent_dim, num_classes=num_classes).to(rank)
     
-    ret_G = G.load_state_dict(decoder.module.state_dict(), strict=False)
-    ret_D = D.load_state_dict(encoder.module.state_dict(), strict=False)
+    if world_size > 1:
+        G = torch.nn.SyncBatchNorm.convert_sync_batchnorm(G)
+        D = torch.nn.SyncBatchNorm.convert_sync_batchnorm(D)
+        G = DDP(G, device_ids=[rank])
+        D = DDP(D, device_ids=[rank]) 
+        
+    ret_G = G.load_state_dict(decoder.state_dict(), strict=False)
+    ret_D = D.load_state_dict(encoder.state_dict(), strict=False)
     print(ret_G)
     print(ret_D)
     
-    calc_mean_cov = ClassCondLatentGen()
+    calc_mean_cov = ClassCondLatentGen(rank=rank)
     calc_mean_cov.stacking(data_loader, encoder)
+
+
+    eval_model = EvalModel(world_size=world_size, device=rank)
+    eval_model.eval()
+    real_feature, real_logit = eval_model.stacking_feature(data_loader=data_loader)
+    
+    mu_real, sigma_real = calculate_mu_sigma(real_feature.cpu().numpy())
+        
 
     optimizer_g = torch.optim.Adam(G.parameters(), lr=args.lr, betas=(args.beta1, args.beta2))
     optimizer_d = torch.optim.Adam(D.parameters(), lr=args.lr, betas=(args.beta1, args.beta2))
@@ -143,10 +169,17 @@ def gan_training(data_loader, logger, world_size, rank, args):
 
     start_time = datetime.now()
     data_iter = iter(data_loader)
+    global_epoch = 0
+    best_fid = 0
+    best_is = 0
+    
+    G.train()
+    D.train()
     for step in range(args.steps):
         try:
             img_real, label_real = data_iter.next()
         except StopIteration:
+            global_epoch += 1
             data_iter = iter(data_loader)
             img_real, label_real = data_iter.next()
         img_real, label_real = img_real.to(rank), label_real.to(rank)
@@ -154,7 +187,7 @@ def gan_training(data_loader, logger, world_size, rank, args):
         sample_labels = np.random.randint(0, 10, label_real.size(0))
         cond_latent = calc_mean_cov.sampling(sample_labels).to(rank)
         fake_label = (torch.ones_like(label_real) * num_classes).to(rank)
-
+        
         optimizer_d.zero_grad()
         gen_img = G(cond_latent).detach()
         output_real = D(img_real)
@@ -175,16 +208,49 @@ def gan_training(data_loader, logger, world_size, rank, args):
         loss_g = loss_fn(output_fake, fake_label)
         loss_g.backward()
         optimizer_g.step()
+        
+        
+        
+        features_gen = []
+        logits_gen = []
+        G.eval()
+        D.eval()
+        with torch.no_grad():
+            for img, label in data_loader:
+                img, label = img.to(rank), label.to(rank)
+                
+                cond_latent = calc_mean_cov.sampling(label.cpu().numpy()).to(rank)
+                gen_img = G(cond_latent)
+                
+                feature, logit = eval_model.get_outputs(gen_img, quantize=True)
+                logit = torch.nn.functional.softmax(logit, dim=1)
+                features_gen.append(feature)
+                logits_gen.append(logit)
+                
+        features_gen = torch.cat(features_gen, dim=0)
+        logits_gen = torch.cat(logits_gen, dim=0)
+        if world_size > 1:
+            features_gen = torch.cat(GatherLayer.apply(features_gen), dim=0)
+            logits_gen = torch.cat(GatherLayer.apply(logits_gen), dim=0)
 
-        if rank == 0:
-            print(f'step: {step+1}/{args.steps}({((step+1) / args.steps)*100:.2f}%), '
-                  f'time: {misc.elapsed_time(start_time)}, '
-                  f'loss D: {loss_d.item():.4f} '
-                  f'loss G: {loss_g.item():.4f}')
+        mu_gen, sigma_gen = calculate_mu_sigma(features_gen.cpu().numpy())
+        fid = frechet_inception_distance(mu_real, sigma_real, mu_gen, sigma_gen)
+        ins = calculate_kl_div(ps_list=logits_gen)[0]
+            
+        print(f'step: {step+1}/{args.steps}({((step+1) / args.steps)*100:.2f}%), '
+                f'time: {misc.elapsed_time(start_time)}, '
+                f'loss D: {loss_d.item():.4f}, '
+                f'loss G: {loss_g.item():.4f}, '
+                f'FID: {fid:.4f}, '
+                f'INS: {ins:.4f}')
+            
         if logger is not None:
-            logger.log({'loss/d':loss_d.item()})
-            logger.log({'loss/g':loss_g.item()})
-
+            logger.log({'fid': fid}, step=step)
+            logger.log({'ins': ins}, step=step)
+            logger.log({'loss/d': loss_d.item()}, step=step)
+            logger.log({'loss/g': loss_g.item()}, step=step)
+        G.train()
+        D.train()
 
     if rank==0:
         print('Save the weights.')

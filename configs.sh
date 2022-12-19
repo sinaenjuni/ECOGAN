@@ -1,10 +1,10 @@
-/home/dblab/.conda/envs/VAE-BGAN/bin/python ./src/training.py \
+python3 ./src/training.py \
 --model bagan \
 --gpus 1 2 \
 --data_name FashionMNIST_LT \
 --path save_files/ \
 --epoch_ae 1 \
---steps 10 \
+--steps 2 \
 --logger false \
 --img_dim 3 \
 --latent_dim 128 \
