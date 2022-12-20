@@ -1,0 +1,15 @@
+python3 -u /home/dblab/git/ECOGAN/src/training.py \
+--model bagan \
+--gpus 4 5 6 7 \
+--data_name FashionMNIST_LT \
+--path save_files/ \
+--epoch_ae 150 \
+--steps 100000 \
+--logger true \
+--img_dim 3 \
+--latent_dim 128 \
+--lr 0.00005 \
+--beta1 0.5 \
+--beta2 0.999 \
+--batch_size 128 \
+--is_save true

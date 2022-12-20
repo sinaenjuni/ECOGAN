@@ -1,0 +1,12 @@
+
+[AE] epoch: 1/10(10.00%), time: 0:00:30, loss: 0.3957959436867611, best epoch: 1, bets loss: 0.3957959436867611
+[AE] epoch: 2/10(20.00%), time: 0:00:32, loss: 0.1558559718261282, best epoch: 2, bets loss: 0.1558559718261282
+[AE] epoch: 3/10(30.00%), time: 0:00:34, loss: 0.11713859681264464, best epoch: 3, bets loss: 0.11713859681264464
+[AE] epoch: 4/10(40.00%), time: 0:00:36, loss: 0.1011294774621366, best epoch: 4, bets loss: 0.1011294774621366
+[AE] epoch: 5/10(50.00%), time: 0:00:38, loss: 0.09238892973187458, best epoch: 5, bets loss: 0.09238892973187458
+[AE] epoch: 6/10(60.00%), time: 0:00:40, loss: 0.08639611097344432, best epoch: 6, bets loss: 0.08639611097344432
+[AE] epoch: 7/10(70.00%), time: 0:00:42, loss: 0.08205228307879114, best epoch: 7, bets loss: 0.08205228307879114
+[AE] epoch: 8/10(80.00%), time: 0:00:44, loss: 0.07848746580890863, best epoch: 8, bets loss: 0.07848746580890863
+[AE] epoch: 9/10(90.00%), time: 0:00:46, loss: 0.07608792832098811, best epoch: 9, bets loss: 0.07608792832098811
+[AE] epoch: 10/10(100.00%), time: 0:00:48, loss: 0.07306438801159341, best epoch: 10, bets loss: 0.07306438801159341
+[AE] best epoch: 10, loss: 0.0731

@@ -1,0 +1,36 @@
+[AE] epoch: 1/1(100.00%), time: 0:00:30, loss: 0.3957953738519944, best epoch: 1, best loss: 0.3957953738519944
+[AE] best epoch: 1, loss: 0.3957953738519944
+Saving the ae weights.
+Stacking BAGAN AE features
+Finish stacking BAGAN AE features
+Using cache found in /home/dblab/.cache/torch/hub/pytorch_vision_v0.10.0
+<All keys matched successfully>
+_IncompatibleKeys(missing_keys=['module.adv.1.weight', 'module.adv.1.bias'], unexpected_keys=['module.linear.1.weight', 'module.linear.1.bias'])
+Exception ignored in: <function _MultiProcessingDataLoaderIter.__del__ at 0x7f3c0fca4320>
+Traceback (most recent call last):
+  File "/home/dblab/.conda/envs/VAE-BGAN/lib/python3.7/site-packages/torch/utils/data/dataloader.py", line 1358, in __del__
+    self._shutdown_workers()
+  File "/home/dblab/.conda/envs/VAE-BGAN/lib/python3.7/site-packages/torch/utils/data/dataloader.py", line 1322, in _shutdown_workers
+    w.join(timeout=_utils.MP_STATUS_CHECK_INTERVAL)
+  File "/home/dblab/.conda/envs/VAE-BGAN/lib/python3.7/multiprocessing/process.py", line 140, in join
+    res = self._popen.wait(timeout)
+  File "/home/dblab/.conda/envs/VAE-BGAN/lib/python3.7/multiprocessing/popen_fork.py", line 45, in wait
+    if not wait([self.sentinel], timeout):
+  File "/home/dblab/.conda/envs/VAE-BGAN/lib/python3.7/multiprocessing/connection.py", line 921, in wait
+    ready = selector.select(timeout)
+  File "/home/dblab/.conda/envs/VAE-BGAN/lib/python3.7/selectors.py", line 415, in select
+    fd_event_list = self._selector.poll(timeout)
+KeyboardInterrupt:
+Process SpawnProcess-1:
+Traceback (most recent call last):
+  File "/home/dblab/.conda/envs/VAE-BGAN/lib/python3.7/multiprocessing/process.py", line 300, in _bootstrap
+    util._exit_function()
+  File "/home/dblab/.conda/envs/VAE-BGAN/lib/python3.7/multiprocessing/util.py", line 357, in _exit_function
+    p.join()
+  File "/home/dblab/.conda/envs/VAE-BGAN/lib/python3.7/multiprocessing/process.py", line 140, in join
+    res = self._popen.wait(timeout)
+  File "/home/dblab/.conda/envs/VAE-BGAN/lib/python3.7/multiprocessing/popen_fork.py", line 48, in wait
+    return self.poll(os.WNOHANG if timeout == 0.0 else 0)
+  File "/home/dblab/.conda/envs/VAE-BGAN/lib/python3.7/multiprocessing/popen_fork.py", line 28, in poll
+    pid, sts = os.waitpid(self.pid, flag)
+KeyboardInterrupt

@@ -1,0 +1,23 @@
+
+Train the models through DistributedDataParallel (DDP) mode.
+rank: 1, world_size: 2
+rank: 0, world_size: 2
+[34m[1mwandb[39m[22m: [33mWARNING[39m `log` ignored (called from pid=12730, `init` called from pid=None). See: http://wandb.me/init-multiprocess
+[AE] epoch: 1/10(10.00%), time: 0:00:30, loss: 0.3958
+Traceback (most recent call last):
+  File "./src/training.py", line 93, in <module>
+    ctx.join()
+  File "/home/dblab/.conda/envs/VAE-BGAN/lib/python3.7/site-packages/torch/multiprocessing/spawn.py", line 160, in join
+    raise ProcessRaisedException(msg, error_index, failed_process.pid)
+torch.multiprocessing.spawn.ProcessRaisedException:
+-- Process 0 terminated with the following error:
+Traceback (most recent call last):
+  File "/home/dblab/.conda/envs/VAE-BGAN/lib/python3.7/site-packages/torch/multiprocessing/spawn.py", line 69, in _wrap
+    fn(i, *args)
+  File "/home/dblab/git/ECOGAN/src/training.py", line 53, in worker
+    getattr(model_module, 'pre_training')(loader_train, logger, world_size, rank, args)
+  File "/home/dblab/git/ECOGAN/src/models/bagan.py", line 162, in pre_training
+    logger.run.summary['best_epoch'] = epoch+1
+AttributeError: 'Run' object has no attribute 'run'
+/home/dblab/.conda/envs/VAE-BGAN/lib/python3.7/multiprocessing/semaphore_tracker.py:144: UserWarning: semaphore_tracker: There appear to be 32 leaked semaphores to clean up at shutdown
+  len(cache))

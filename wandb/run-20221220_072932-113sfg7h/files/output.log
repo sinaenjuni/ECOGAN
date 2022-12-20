@@ -1,0 +1,17 @@
+
+Train the models through DistributedDataParallel (DDP) mode.
+rank: 1, world_size: 2
+rank: 0, world_size: 2
+[AE] epoch: 1/10(10.00%), time: 0:00:30, loss: 0.3958
+[34m[1mwandb[39m[22m: [33mWARNING[39m `log` ignored (called from pid=15664, `init` called from pid=None). See: http://wandb.me/init-multiprocess
+[AE] epoch: 2/10(20.00%), time: 0:00:32, loss: 0.1558
+[AE] epoch: 3/10(30.00%), time: 0:00:34, loss: 0.1172
+[AE] epoch: 4/10(40.00%), time: 0:00:36, loss: 0.1012
+[AE] epoch: 5/10(50.00%), time: 0:00:38, loss: 0.0924
+[AE] epoch: 6/10(60.00%), time: 0:00:40, loss: 0.0865
+[AE] epoch: 7/10(70.00%), time: 0:00:42, loss: 0.0821
+[AE] epoch: 8/10(80.00%), time: 0:00:44, loss: 0.0785
+[AE] epoch: 9/10(90.00%), time: 0:00:46, loss: 0.0761
+[AE] epoch: 10/10(100.00%), time: 0:00:48, loss: 0.0729
+[AE] best epoch: 10, loss: 0.0729
+Saving the ae weights.

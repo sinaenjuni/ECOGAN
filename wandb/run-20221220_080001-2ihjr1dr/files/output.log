@@ -1,0 +1,12 @@
+
+[AE] epoch: 1/10(10.00%), time: 0:00:30, loss: 0.39578021003539304, best epoch: 1, best loss: 0.39578021003539304
+[AE] epoch: 2/10(20.00%), time: 0:00:32, loss: 0.15600109728704015, best epoch: 2, best loss: 0.15600109728704015
+[AE] epoch: 3/10(30.00%), time: 0:00:34, loss: 0.11705785226750087, best epoch: 3, best loss: 0.11705785226750087
+[AE] epoch: 4/10(40.00%), time: 0:00:36, loss: 0.10131676872092557, best epoch: 4, best loss: 0.10131676872092557
+[AE] epoch: 5/10(50.00%), time: 0:00:38, loss: 0.09252397769904998, best epoch: 5, best loss: 0.09252397769904998
+[AE] epoch: 6/10(60.00%), time: 0:00:40, loss: 0.08646817065506096, best epoch: 6, best loss: 0.08646817065506096
+[AE] epoch: 7/10(70.00%), time: 0:00:42, loss: 0.0821440207311906, best epoch: 7, best loss: 0.0821440207311906
+[AE] epoch: 8/10(80.00%), time: 0:00:44, loss: 0.07858501913317714, best epoch: 8, best loss: 0.07858501913317714
+[AE] epoch: 9/10(90.00%), time: 0:00:46, loss: 0.07613339041730008, best epoch: 9, best loss: 0.07613339041730008
+[AE] epoch: 10/10(100.00%), time: 0:00:48, loss: 0.07318301705351796, best epoch: 10, best loss: 0.07318301705351796
+[AE] best epoch: 10, loss: 0.0732

@@ -13,6 +13,8 @@ from metric.inception_net_V2 import EvalModel
 from metric.fid import calculate_mu_sigma, frechet_inception_distance
 from metric.ins import calculate_kl_div
 from utils.misc import GatherLayer
+from torchvision.utils import make_grid
+import wandb
 
 
 class Encoder(nn.Module):
@@ -85,6 +87,35 @@ class ClassCondLatentGen:
         return sample_latents
 
 
+
+def evaluate(data_loader, G, eval_model, calc_mean_cov, mu_real, sigma_real, world_size, rank):
+    features_gen = []
+    logits_gen = []
+    G.eval()
+    with torch.no_grad():
+        for img, label in data_loader:
+            img, label = img.to(rank), label.to(rank)
+            
+            cond_latent = calc_mean_cov.sampling(label.cpu().numpy()).to(rank)
+            gen_img = G(cond_latent)
+            
+            feature, logit = eval_model.get_outputs(gen_img, quantize=True)
+            logit = torch.nn.functional.softmax(logit, dim=1)
+            features_gen.append(feature)
+            logits_gen.append(logit)
+            
+    features_gen = torch.cat(features_gen, dim=0)
+    logits_gen = torch.cat(logits_gen, dim=0)
+    if world_size > 1:
+        features_gen = torch.cat(GatherLayer.apply(features_gen), dim=0)
+        logits_gen = torch.cat(GatherLayer.apply(logits_gen), dim=0)
+
+    mu_gen, sigma_gen = calculate_mu_sigma(features_gen.cpu().numpy())
+    fid = frechet_inception_distance(mu_real, sigma_real, mu_gen, sigma_gen)
+    ins = calculate_kl_div(ps_list=logits_gen)[0]
+    G.train()
+    return fid, ins
+
 def pre_training(data_loader, logger, world_size, rank, args):
     encoder = Encoder(img_dim=args.img_dim, latent_dim=args.latent_dim).to(rank)
     decoder = Decoder(img_dim=args.img_dim, latent_dim=args.latent_dim).to(rank)
@@ -104,6 +135,7 @@ def pre_training(data_loader, logger, world_size, rank, args):
     start_time = datetime.now()
     losses = 0
     best_losses = float("inf")
+    best_epoch = 0
     best_encoder = None
     best_decoder = None
     for epoch in range(args.epoch_ae):
@@ -119,28 +151,44 @@ def pre_training(data_loader, logger, world_size, rank, args):
             losses += loss.item()
 
         losses = losses / len(data_loader)
-        print(f'epoch: {epoch+1}/{args.epoch_ae}({((epoch+1) / args.epoch_ae)*100:.2f}%), '
-                f'time: {misc.elapsed_time(start_time)}, '
-                f'loss: {losses:.4f}')
-        if logger is not None:
-            logger.log({'loss/ae':losses})
+
         if best_losses > losses:
             best_decoder = decoder
             best_encoder = encoder
             best_losses = losses
+            best_epoch = epoch+1
+            
+        print(f'[AE] epoch: {epoch+1}/{args.epoch_ae}({((epoch+1) / args.epoch_ae)*100:.2f}%), '
+            f'time: {misc.elapsed_time(start_time)}, '
+            f'loss: {losses}, '
+            f'best epoch: {best_epoch}, '
+            f'best loss: {best_losses}')
+        
+        if logger is not None:
+            logger.log({'loss/ae':losses}, step=epoch+1)
         losses = 0
         
-    print(f"[Best ae] epoch: {epoch+1}, loss: {best_losses}")
+    print(f"[AE] best epoch: {epoch+1}, loss: {best_losses}")
+    if args.is_save and rank==0:
+        print('Saving the ae weights.')
+        torch.save(best_encoder.state_dict(), os.path.join(args.path, f'encoder_{epoch+1}_{best_losses}.pth'))
+        torch.save(best_decoder.state_dict(), os.path.join(args.path, f'decoder_{epoch+1}_{best_losses}.pth'))
     return best_encoder, best_decoder
 
 
-def gan_training(data_loader, logger, world_size, rank, args):
+def training(data_loader, logger, world_size, rank, args):
     encoder, decoder = pre_training(data_loader, logger, world_size, rank, args)
+    calc_mean_cov = ClassCondLatentGen(rank=rank)
+    calc_mean_cov.stacking(data_loader, encoder)
+    
+    vis_sampling = torch.arange(0, 10)
+    vis_sampling = torch.arange(0, 10).repeat(10)
+    vis_z = calc_mean_cov.sampling(vis_sampling.numpy()).to(rank)
     
     num_classes = len(data_loader.dataset.classes)
     G = Generator(args.img_dim, latent_dim=args.latent_dim).to(rank)
     D = Discriminator(img_dim=args.img_dim, latent_dim=args.latent_dim, num_classes=num_classes).to(rank)
-    
+   
     if world_size > 1:
         G = torch.nn.SyncBatchNorm.convert_sync_batchnorm(G)
         D = torch.nn.SyncBatchNorm.convert_sync_batchnorm(D)
@@ -152,27 +200,26 @@ def gan_training(data_loader, logger, world_size, rank, args):
     print(ret_G)
     print(ret_D)
     
-    calc_mean_cov = ClassCondLatentGen(rank=rank)
-    calc_mean_cov.stacking(data_loader, encoder)
-
 
     eval_model = EvalModel(world_size=world_size, device=rank)
     eval_model.eval()
     real_feature, real_logit = eval_model.stacking_feature(data_loader=data_loader)
-    
     mu_real, sigma_real = calculate_mu_sigma(real_feature.cpu().numpy())
         
-
     optimizer_g = torch.optim.Adam(G.parameters(), lr=args.lr, betas=(args.beta1, args.beta2))
     optimizer_d = torch.optim.Adam(D.parameters(), lr=args.lr, betas=(args.beta1, args.beta2))
     loss_fn = nn.CrossEntropyLoss()
 
+    global_epoch = 0
+    
+    best_step = 0
+    best_fid = float('inf')
+    best_is = 0
+    best_G = 0
+    best_D = 0
+    
     start_time = datetime.now()
     data_iter = iter(data_loader)
-    global_epoch = 0
-    best_fid = 0
-    best_is = 0
-    
     G.train()
     D.train()
     for step in range(args.steps):
@@ -210,58 +257,58 @@ def gan_training(data_loader, logger, world_size, rank, args):
         optimizer_g.step()
         
         
+        if (step+1) % 2000 == 0:
+            fid, ins = evaluate(data_loader=data_loader, 
+                                G=G, 
+                                eval_model=eval_model,
+                                calc_mean_cov=calc_mean_cov,
+                                mu_real=mu_real,
+                                sigma_real=sigma_real,
+                                world_size=world_size,
+                                rank=rank)
+            
+            if best_fid > fid:
+                best_fid = fid
+                best_is = ins
+                best_step = step+1
+                best_G = G
+                best_D = D
+            
+            print(f'[GAN] step: {step+1}/{args.steps}({((step+1) / args.steps)*100:.2f}%), '
+                    f'time: {misc.elapsed_time(start_time)}, '
+                    f'loss D: {loss_d.item()}, '
+                    f'loss G: {loss_g.item()}, '
+                    f'FID: {fid}, '
+                    f'INS: {ins}, '
+                    f'best step: {best_step}, '
+                    f'best FID: {best_fid}, '
+                    f'best INS: {best_is} ')
+            
+            vis_image = G(vis_z)
+            grid = make_grid(vis_image, normalize=False, nrow=10)
+            # print(grid.size())
+            
+            if logger is not None:
+                logger.log({'fid': fid}, step=step+1)
+                logger.log({'ins': ins}, step=step+1)
+                logger.log({'loss/d': loss_d.item()}, step=step+1)
+                logger.log({'loss/g': loss_g.item()}, step=step+1)
+                logger.log({'vis_image': wandb.Image(grid)}, step+1)
+
+            G.train()
+            D.train()
         
-        features_gen = []
-        logits_gen = []
-        G.eval()
-        D.eval()
-        with torch.no_grad():
-            for img, label in data_loader:
-                img, label = img.to(rank), label.to(rank)
-                
-                cond_latent = calc_mean_cov.sampling(label.cpu().numpy()).to(rank)
-                gen_img = G(cond_latent)
-                
-                feature, logit = eval_model.get_outputs(gen_img, quantize=True)
-                logit = torch.nn.functional.softmax(logit, dim=1)
-                features_gen.append(feature)
-                logits_gen.append(logit)
-                
-        features_gen = torch.cat(features_gen, dim=0)
-        logits_gen = torch.cat(logits_gen, dim=0)
-        if world_size > 1:
-            features_gen = torch.cat(GatherLayer.apply(features_gen), dim=0)
-            logits_gen = torch.cat(GatherLayer.apply(logits_gen), dim=0)
-
-        mu_gen, sigma_gen = calculate_mu_sigma(features_gen.cpu().numpy())
-        fid = frechet_inception_distance(mu_real, sigma_real, mu_gen, sigma_gen)
-        ins = calculate_kl_div(ps_list=logits_gen)[0]
-            
-        print(f'step: {step+1}/{args.steps}({((step+1) / args.steps)*100:.2f}%), '
-                f'time: {misc.elapsed_time(start_time)}, '
-                f'loss D: {loss_d.item():.4f}, '
-                f'loss G: {loss_g.item():.4f}, '
-                f'FID: {fid:.4f}, '
-                f'INS: {ins:.4f}')
-            
-        if logger is not None:
-            logger.log({'fid': fid}, step=step)
-            logger.log({'ins': ins}, step=step)
-            logger.log({'loss/d': loss_d.item()}, step=step)
-            logger.log({'loss/g': loss_g.item()}, step=step)
-        G.train()
-        D.train()
-
+        
+    print(f'[GAN] best step: {best_step}, '
+            f'best FID: {best_fid}, '
+            f'best INS: {best_is} ')
     if rank==0:
         print('Save the weights.')
-        torch.save(encoder.state_dict(), os.path.join(args.path, 'encoder.pth'))
-        torch.save(decoder.state_dict(), os.path.join(args.path, 'decoder.pth'))
-        torch.save(G.state_dict(), os.path.join(args.path, 'G.pth'))
-        torch.save(D.state_dict(), os.path.join(args.path, 'D.pth'))
+        torch.save(best_G.state_dict(), os.path.join(args.path, f'G_{best_step}_{best_fid}_{best_is}.pth'))
+        torch.save(best_D.state_dict(), os.path.join(args.path, f'D_{best_step}_{best_fid}_{best_is}.pth'))
 
 
 
-#
 
 # vis_label = torch.arange(0, 10).repeat(10)
 # vis_z = calc_mean_cov.sampling(vis_label.numpy())

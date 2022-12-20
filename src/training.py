@@ -22,13 +22,13 @@ def worker(rank, world_size, args):
     if world_size > 1:
         misc.setup(rank, world_size)
         misc.fix_seed(rank)
-        args.batch_size = args.batch_size//world_size
         
-    if rank==0 and args.logger:
-        logger = wandb.init(project="eval_cls", entity="sinaenjuni")
+    if args.logger and rank==0:
+        wandb.require("service")
+        logger = wandb.init(project="bagan", entity="sinaenjuni", config=args)
     else:
         logger = None
-
+ 
     transforms = Compose([ToTensor(),
                         Resize(64),
                         Normalize(mean=[0.5, 0.5, 0.5],
@@ -54,9 +54,12 @@ def worker(rank, world_size, args):
 
 
     model_module = importlib.import_module(f'models.{args.model}')
-    getattr(model_module, 'gan_training')(loader_train, logger, world_size=world_size, rank=rank, args=args)
+    # getattr(model_module, 'pre_training')(loader_train, logger, world_size, rank, args)
+    
+    getattr(model_module, 'training')(loader_train, logger, world_size=world_size, rank=rank, args=args)
 
     # print("@@@@@", model_module)
+ 
  
     misc.cleanup()
 
@@ -65,20 +68,17 @@ def worker(rank, world_size, args):
 
 
 
-
 if __name__ == "__main__":
-    #
-    # print(gpus_per_node, rank)
     
     args = load_configs_init()
+    world_size = len(args.gpus)
+    args.batch_size = args.batch_size//world_size
     args.path = os.path.join(args.path, args.model, args.data_name)
+    os.environ["CUDA_VISIBLE_DEVICES"] = ", ".join(map(str, args.gpus))
+    # os.environ['PYTHONWARNINGS'] = 'ignore:semaphore_tracker:UserWarning'
     os.makedirs(args.path, exist_ok=True)
     print(args)
     
-    os.environ["CUDA_VISIBLE_DEVICES"] = ", ".join(map(str, args.gpus))
-    # os.environ['PYTHONWARNINGS'] = 'ignore:semaphore_tracker:UserWarning'
-    world_size = len(args.gpus)
-
     if world_size > 1:
         mp.set_start_method("spawn", force=True)
         print("Train the models through DistributedDataParallel (DDP) mode.")

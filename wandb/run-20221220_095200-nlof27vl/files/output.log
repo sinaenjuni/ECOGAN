@@ -1,0 +1,12 @@
+[AE] epoch: 1/1(100.00%), time: 0:00:30, loss: 0.3971402409924082, best epoch: 1, best loss: 0.3971402409924082
+[AE] best epoch: 1, loss: 0.3971402409924082
+Saving the ae weights.
+Stacking BAGAN AE features
+Using cache found in /home/dblab/.cache/torch/hub/pytorch_vision_v0.10.0
+Finish stacking BAGAN AE features
+<All keys matched successfully>
+_IncompatibleKeys(missing_keys=['module.adv.1.weight', 'module.adv.1.bias'], unexpected_keys=['module.linear.1.weight', 'module.linear.1.bias'])
+[GAN] step: 1/3(33.33%), time: 0:01:24, loss D: 4.786437034606934, loss G: 2.401977777481079, FID: 440.04089869159486, INS: 1.2159579992294312, best step: 1, best FID: 440.04089869159486, best INS: 1.2159579992294312
+[GAN] step: 2/3(66.67%), time: 0:02:45, loss D: 4.773652076721191, loss G: 2.3978140354156494, FID: 443.25181093503164, INS: 1.3963285684585571, best step: 1, best FID: 440.04089869159486, best INS: 1.2159579992294312
+[GAN] step: 3/3(100.00%), time: 0:04:17, loss D: 4.76004695892334, loss G: 2.3908286094665527, FID: 429.1886423856346, INS: 1.6640186309814453, best step: 3, best FID: 429.1886423856346, best INS: 1.6640186309814453
+[GAN] best step: 3, best FID: 429.1886423856346, best INS: 1.6640186309814453

@@ -24,6 +24,7 @@ def load_configs_init():
     parser.add_argument("--beta1", type=float, required=True)
     parser.add_argument("--beta2", type=float, required=True)
     parser.add_argument("--batch_size", type=int, required=True)
+    parser.add_argument("--is_save", type=str2bool, required=True)
     
     args = parser.parse_args()
     # cfgs = vars(args)

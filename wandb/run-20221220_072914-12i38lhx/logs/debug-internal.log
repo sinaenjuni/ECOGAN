@@ -1,0 +1,80 @@
+2022-12-20 07:29:15,805 INFO    MainThread:15393 [internal.py:wandb_internal():93] W&B internal server running at pid: 15393, started at: 2022-12-20 07:29:15.804598
+2022-12-20 07:29:15,808 INFO    WriterThread:15393 [datastore.py:open_for_write():75] open: /home/dblab/git/ECOGAN/wandb/run-20221220_072914-12i38lhx/run-12i38lhx.wandb
+2022-12-20 07:29:15,813 DEBUG   SenderThread:15393 [sender.py:send():236] send: header
+2022-12-20 07:29:15,813 DEBUG   SenderThread:15393 [sender.py:send():236] send: run
+2022-12-20 07:29:16,081 DEBUG   HandlerThread:15393 [handler.py:handle_request():140] handle_request: check_version
+2022-12-20 07:29:16,082 INFO    SenderThread:15393 [dir_watcher.py:__init__():216] watching files in: /home/dblab/git/ECOGAN/wandb/run-20221220_072914-12i38lhx/files
+2022-12-20 07:29:16,082 INFO    SenderThread:15393 [sender.py:_start_run_threads():818] run started: 12i38lhx with start time 1671521354
+2022-12-20 07:29:16,082 DEBUG   SenderThread:15393 [sender.py:send():236] send: summary
+2022-12-20 07:29:16,083 INFO    SenderThread:15393 [sender.py:_save_file():952] saving file wandb-summary.json with policy end
+2022-12-20 07:29:16,083 DEBUG   SenderThread:15393 [sender.py:send_request():250] send_request: check_version
+2022-12-20 07:29:16,146 DEBUG   HandlerThread:15393 [handler.py:handle_request():140] handle_request: run_start
+2022-12-20 07:29:16,155 DEBUG   HandlerThread:15393 [meta.py:__init__():35] meta init
+2022-12-20 07:29:16,155 DEBUG   HandlerThread:15393 [meta.py:__init__():49] meta init done
+2022-12-20 07:29:16,155 DEBUG   HandlerThread:15393 [meta.py:probe():209] probe
+2022-12-20 07:29:16,162 DEBUG   HandlerThread:15393 [meta.py:_setup_git():199] setup git
+2022-12-20 07:29:16,190 DEBUG   HandlerThread:15393 [meta.py:_setup_git():206] setup git done
+2022-12-20 07:29:16,190 DEBUG   HandlerThread:15393 [meta.py:_save_pip():53] save pip
+2022-12-20 07:29:16,191 DEBUG   HandlerThread:15393 [meta.py:_save_pip():67] save pip done
+2022-12-20 07:29:16,191 DEBUG   HandlerThread:15393 [meta.py:_save_conda():74] save conda
+2022-12-20 07:29:17,086 INFO    Thread-7  :15393 [dir_watcher.py:_on_file_created():269] file/dir created: /home/dblab/git/ECOGAN/wandb/run-20221220_072914-12i38lhx/files/requirements.txt
+2022-12-20 07:29:17,087 INFO    Thread-7  :15393 [dir_watcher.py:_on_file_created():269] file/dir created: /home/dblab/git/ECOGAN/wandb/run-20221220_072914-12i38lhx/files/wandb-summary.json
+2022-12-20 07:29:17,087 INFO    Thread-7  :15393 [dir_watcher.py:_on_file_created():269] file/dir created: /home/dblab/git/ECOGAN/wandb/run-20221220_072914-12i38lhx/files/conda-environment.yaml
+2022-12-20 07:29:19,298 DEBUG   HandlerThread:15393 [meta.py:_save_conda():84] save conda done
+2022-12-20 07:29:19,298 DEBUG   HandlerThread:15393 [meta.py:probe():247] probe done
+2022-12-20 07:29:19,351 DEBUG   SenderThread:15393 [sender.py:send():236] send: files
+2022-12-20 07:29:19,351 INFO    SenderThread:15393 [sender.py:_save_file():952] saving file wandb-metadata.json with policy now
+2022-12-20 07:29:19,360 DEBUG   HandlerThread:15393 [handler.py:handle_request():140] handle_request: stop_status
+2022-12-20 07:29:19,360 DEBUG   SenderThread:15393 [sender.py:send_request():250] send_request: stop_status
+2022-12-20 07:29:19,583 DEBUG   SenderThread:15393 [sender.py:send():236] send: telemetry
+2022-12-20 07:29:19,584 DEBUG   SenderThread:15393 [sender.py:send():236] send: metric
+2022-12-20 07:29:19,584 DEBUG   SenderThread:15393 [sender.py:send():236] send: metric
+2022-12-20 07:29:19,584 DEBUG   SenderThread:15393 [sender.py:send():236] send: telemetry
+2022-12-20 07:29:20,088 INFO    Thread-7  :15393 [dir_watcher.py:_on_file_modified():286] file/dir modified: /home/dblab/git/ECOGAN/wandb/run-20221220_072914-12i38lhx/files/conda-environment.yaml
+2022-12-20 07:29:20,088 INFO    Thread-7  :15393 [dir_watcher.py:_on_file_created():269] file/dir created: /home/dblab/git/ECOGAN/wandb/run-20221220_072914-12i38lhx/files/output.log
+2022-12-20 07:29:20,089 INFO    Thread-7  :15393 [dir_watcher.py:_on_file_created():269] file/dir created: /home/dblab/git/ECOGAN/wandb/run-20221220_072914-12i38lhx/files/wandb-metadata.json
+2022-12-20 07:29:20,213 INFO    Thread-11 :15393 [upload_job.py:push():138] Uploaded file /tmp/tmpnk7m8aw6wandb/1hxoaok6-wandb-metadata.json
+2022-12-20 07:29:22,089 INFO    Thread-7  :15393 [dir_watcher.py:_on_file_modified():286] file/dir modified: /home/dblab/git/ECOGAN/wandb/run-20221220_072914-12i38lhx/files/output.log
+2022-12-20 07:29:24,091 INFO    Thread-7  :15393 [dir_watcher.py:_on_file_modified():286] file/dir modified: /home/dblab/git/ECOGAN/wandb/run-20221220_072914-12i38lhx/files/output.log
+2022-12-20 07:29:26,910 WARNING MainThread:15393 [internal.py:wandb_internal():153] Internal process interrupt: 1
+2022-12-20 07:29:26,917 DEBUG   SenderThread:15393 [sender.py:send():236] send: telemetry
+2022-12-20 07:29:29,387 DEBUG   SenderThread:15393 [sender.py:send():236] send: exit
+2022-12-20 07:29:29,388 INFO    SenderThread:15393 [sender.py:send_exit():372] handling exit code: 255
+2022-12-20 07:29:29,389 INFO    SenderThread:15393 [sender.py:send_exit():374] handling runtime: 13
+2022-12-20 07:29:29,390 DEBUG   HandlerThread:15393 [handler.py:handle_request():140] handle_request: poll_exit
+2022-12-20 07:29:29,394 INFO    SenderThread:15393 [sender.py:_save_file():952] saving file wandb-summary.json with policy end
+2022-12-20 07:29:29,395 INFO    SenderThread:15393 [sender.py:send_exit():380] send defer
+2022-12-20 07:29:29,395 DEBUG   SenderThread:15393 [sender.py:send_request():250] send_request: poll_exit
+2022-12-20 07:29:29,397 DEBUG   HandlerThread:15393 [handler.py:handle_request():140] handle_request: defer
+2022-12-20 07:29:29,397 INFO    HandlerThread:15393 [handler.py:handle_request_defer():163] handle defer: 0
+2022-12-20 07:29:29,398 DEBUG   SenderThread:15393 [sender.py:send_request():250] send_request: defer
+2022-12-20 07:29:29,398 INFO    SenderThread:15393 [sender.py:send_request_defer():389] handle sender defer: 0
+2022-12-20 07:29:29,398 INFO    SenderThread:15393 [sender.py:transition_state():393] send defer: 1
+2022-12-20 07:29:29,399 DEBUG   HandlerThread:15393 [handler.py:handle_request():140] handle_request: defer
+2022-12-20 07:29:29,399 INFO    HandlerThread:15393 [handler.py:handle_request_defer():163] handle defer: 1
+2022-12-20 07:29:29,422 WARNING MainThread:15393 [internal.py:wandb_internal():153] Internal process interrupt: 2
+2022-12-20 07:29:29,422 ERROR   MainThread:15393 [internal.py:wandb_internal():156] Internal process interrupted.
+2022-12-20 07:29:29,507 INFO    HandlerThread:15393 [handler.py:finish():806] shutting down handler
+2022-12-20 07:29:29,508 DEBUG   SenderThread:15393 [sender.py:send_request():250] send_request: defer
+2022-12-20 07:29:29,508 INFO    SenderThread:15393 [sender.py:send_request_defer():389] handle sender defer: 1
+2022-12-20 07:29:29,508 INFO    SenderThread:15393 [sender.py:transition_state():393] send defer: 2
+2022-12-20 07:29:29,508 INFO    SenderThread:15393 [sender.py:finish():1114] shutting down sender
+2022-12-20 07:29:29,508 INFO    SenderThread:15393 [dir_watcher.py:finish():353] shutting down directory watcher
+2022-12-20 07:29:30,093 INFO    SenderThread:15393 [dir_watcher.py:_on_file_modified():286] file/dir modified: /home/dblab/git/ECOGAN/wandb/run-20221220_072914-12i38lhx/files/output.log
+2022-12-20 07:29:30,094 INFO    SenderThread:15393 [dir_watcher.py:_on_file_modified():286] file/dir modified: /home/dblab/git/ECOGAN/wandb/run-20221220_072914-12i38lhx/files/wandb-summary.json
+2022-12-20 07:29:30,095 INFO    SenderThread:15393 [dir_watcher.py:finish():383] scan: /home/dblab/git/ECOGAN/wandb/run-20221220_072914-12i38lhx/files
+2022-12-20 07:29:30,095 INFO    SenderThread:15393 [dir_watcher.py:finish():397] scan save: /home/dblab/git/ECOGAN/wandb/run-20221220_072914-12i38lhx/files/requirements.txt requirements.txt
+2022-12-20 07:29:30,095 INFO    SenderThread:15393 [dir_watcher.py:finish():397] scan save: /home/dblab/git/ECOGAN/wandb/run-20221220_072914-12i38lhx/files/output.log output.log
+2022-12-20 07:29:30,104 INFO    SenderThread:15393 [dir_watcher.py:finish():397] scan save: /home/dblab/git/ECOGAN/wandb/run-20221220_072914-12i38lhx/files/wandb-summary.json wandb-summary.json
+2022-12-20 07:29:30,105 INFO    SenderThread:15393 [dir_watcher.py:finish():397] scan save: /home/dblab/git/ECOGAN/wandb/run-20221220_072914-12i38lhx/files/wandb-metadata.json wandb-metadata.json
+2022-12-20 07:29:30,109 INFO    SenderThread:15393 [dir_watcher.py:finish():397] scan save: /home/dblab/git/ECOGAN/wandb/run-20221220_072914-12i38lhx/files/conda-environment.yaml conda-environment.yaml
+2022-12-20 07:29:30,109 INFO    SenderThread:15393 [dir_watcher.py:finish():397] scan save: /home/dblab/git/ECOGAN/wandb/run-20221220_072914-12i38lhx/files/config.yaml config.yaml
+2022-12-20 07:29:30,110 INFO    SenderThread:15393 [file_pusher.py:finish():171] shutting down file pusher
+2022-12-20 07:29:30,110 INFO    SenderThread:15393 [file_pusher.py:join():176] waiting for file pusher
+2022-12-20 07:29:30,404 INFO    WriterThread:15393 [datastore.py:close():279] close: /home/dblab/git/ECOGAN/wandb/run-20221220_072914-12i38lhx/run-12i38lhx.wandb
+2022-12-20 07:29:30,967 INFO    Thread-14 :15393 [upload_job.py:push():138] Uploaded file /home/dblab/git/ECOGAN/wandb/run-20221220_072914-12i38lhx/files/wandb-summary.json
+2022-12-20 07:29:30,977 INFO    Thread-13 :15393 [upload_job.py:push():138] Uploaded file /home/dblab/git/ECOGAN/wandb/run-20221220_072914-12i38lhx/files/output.log
+2022-12-20 07:29:30,989 INFO    Thread-16 :15393 [upload_job.py:push():138] Uploaded file /home/dblab/git/ECOGAN/wandb/run-20221220_072914-12i38lhx/files/config.yaml
+2022-12-20 07:29:30,996 INFO    Thread-12 :15393 [upload_job.py:push():138] Uploaded file /home/dblab/git/ECOGAN/wandb/run-20221220_072914-12i38lhx/files/requirements.txt
+2022-12-20 07:29:30,998 INFO    Thread-15 :15393 [upload_job.py:push():138] Uploaded file /home/dblab/git/ECOGAN/wandb/run-20221220_072914-12i38lhx/files/conda-environment.yaml
+2022-12-20 07:29:32,209 INFO    MainThread:15393 [internal.py:handle_exit():80] Internal process exited

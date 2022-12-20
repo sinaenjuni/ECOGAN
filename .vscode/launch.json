@@ -34,11 +34,19 @@
                 "--beta2",
                 "0.999",
                 "--logger",
-                "false",
+                "true",
                 "--batch_size",
                 "128",
                 "--steps",
-                "10"
+                "10",
+                "--model",
+                "bagan",
+                "--path",
+                "./save_files/",
+                "--data_name",
+                "CIFAR10_LT",
+                "--is_save",
+                "true"
             ],
             "console": "integratedTerminal",
         }

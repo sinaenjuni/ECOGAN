@@ -1,0 +1,230 @@
+2022-12-20 09:24:51,127 INFO    StreamThr :1135 [internal.py:wandb_internal():93] W&B internal server running at pid: 1135, started at: 2022-12-20 09:24:51.126626
+2022-12-20 09:24:51,132 DEBUG   HandlerThread:1135 [handler.py:handle_request():140] handle_request: status
+2022-12-20 09:24:51,134 DEBUG   SenderThread:1135 [sender.py:send_request():250] send_request: status
+2022-12-20 09:24:51,136 DEBUG   SenderThread:1135 [sender.py:send():236] send: header
+2022-12-20 09:24:51,137 INFO    WriterThread:1135 [datastore.py:open_for_write():75] open: /home/dblab/git/ECOGAN/wandb/run-20221220_092451-3kql9ejn/run-3kql9ejn.wandb
+2022-12-20 09:24:51,145 DEBUG   SenderThread:1135 [sender.py:send():236] send: run
+2022-12-20 09:24:51,423 INFO    SenderThread:1135 [dir_watcher.py:__init__():216] watching files in: /home/dblab/git/ECOGAN/wandb/run-20221220_092451-3kql9ejn/files
+2022-12-20 09:24:51,423 INFO    SenderThread:1135 [sender.py:_start_run_threads():818] run started: 3kql9ejn with start time 1671528291
+2022-12-20 09:24:51,423 DEBUG   SenderThread:1135 [sender.py:send():236] send: summary
+2022-12-20 09:24:51,424 INFO    SenderThread:1135 [sender.py:_save_file():952] saving file wandb-summary.json with policy end
+2022-12-20 09:24:51,424 DEBUG   HandlerThread:1135 [handler.py:handle_request():140] handle_request: check_version
+2022-12-20 09:24:51,425 DEBUG   SenderThread:1135 [sender.py:send_request():250] send_request: check_version
+2022-12-20 09:24:51,490 DEBUG   HandlerThread:1135 [handler.py:handle_request():140] handle_request: run_start
+2022-12-20 09:24:51,513 DEBUG   HandlerThread:1135 [meta.py:__init__():35] meta init
+2022-12-20 09:24:51,513 DEBUG   HandlerThread:1135 [meta.py:__init__():49] meta init done
+2022-12-20 09:24:51,513 DEBUG   HandlerThread:1135 [meta.py:probe():209] probe
+2022-12-20 09:24:51,673 DEBUG   HandlerThread:1135 [meta.py:_setup_git():199] setup git
+2022-12-20 09:24:51,698 DEBUG   HandlerThread:1135 [meta.py:_setup_git():206] setup git done
+2022-12-20 09:24:51,699 DEBUG   HandlerThread:1135 [meta.py:_save_pip():53] save pip
+2022-12-20 09:24:51,700 DEBUG   HandlerThread:1135 [meta.py:_save_pip():67] save pip done
+2022-12-20 09:24:51,700 DEBUG   HandlerThread:1135 [meta.py:_save_conda():74] save conda
+2022-12-20 09:24:52,427 INFO    Thread-12 :1135 [dir_watcher.py:_on_file_created():269] file/dir created: /home/dblab/git/ECOGAN/wandb/run-20221220_092451-3kql9ejn/files/conda-environment.yaml
+2022-12-20 09:24:52,428 INFO    Thread-12 :1135 [dir_watcher.py:_on_file_created():269] file/dir created: /home/dblab/git/ECOGAN/wandb/run-20221220_092451-3kql9ejn/files/requirements.txt
+2022-12-20 09:24:52,428 INFO    Thread-12 :1135 [dir_watcher.py:_on_file_created():269] file/dir created: /home/dblab/git/ECOGAN/wandb/run-20221220_092451-3kql9ejn/files/wandb-summary.json
+2022-12-20 09:24:54,905 DEBUG   HandlerThread:1135 [meta.py:_save_conda():84] save conda done
+2022-12-20 09:24:54,906 DEBUG   HandlerThread:1135 [meta.py:probe():247] probe done
+2022-12-20 09:24:54,958 DEBUG   SenderThread:1135 [sender.py:send():236] send: files
+2022-12-20 09:24:54,958 INFO    SenderThread:1135 [sender.py:_save_file():952] saving file wandb-metadata.json with policy now
+2022-12-20 09:24:54,971 DEBUG   HandlerThread:1135 [handler.py:handle_request():140] handle_request: stop_status
+2022-12-20 09:24:54,971 DEBUG   SenderThread:1135 [sender.py:send_request():250] send_request: stop_status
+2022-12-20 09:24:55,197 DEBUG   SenderThread:1135 [sender.py:send():236] send: telemetry
+2022-12-20 09:24:55,430 INFO    Thread-12 :1135 [dir_watcher.py:_on_file_modified():286] file/dir modified: /home/dblab/git/ECOGAN/wandb/run-20221220_092451-3kql9ejn/files/conda-environment.yaml
+2022-12-20 09:24:55,430 INFO    Thread-12 :1135 [dir_watcher.py:_on_file_created():269] file/dir created: /home/dblab/git/ECOGAN/wandb/run-20221220_092451-3kql9ejn/files/output.log
+2022-12-20 09:24:55,431 INFO    Thread-12 :1135 [dir_watcher.py:_on_file_created():269] file/dir created: /home/dblab/git/ECOGAN/wandb/run-20221220_092451-3kql9ejn/files/wandb-metadata.json
+2022-12-20 09:24:55,810 INFO    Thread-16 :1135 [upload_job.py:push():138] Uploaded file /tmp/tmpuhlgukabwandb/3d4yb3gw-wandb-metadata.json
+2022-12-20 09:25:10,271 DEBUG   HandlerThread:1135 [handler.py:handle_request():140] handle_request: stop_status
+2022-12-20 09:25:10,272 DEBUG   SenderThread:1135 [sender.py:send_request():250] send_request: stop_status
+2022-12-20 09:25:22,445 INFO    Thread-12 :1135 [dir_watcher.py:_on_file_modified():286] file/dir modified: /home/dblab/git/ECOGAN/wandb/run-20221220_092451-3kql9ejn/files/config.yaml
+2022-12-20 09:25:23,761 DEBUG   SenderThread:1135 [sender.py:send():236] send: stats
+2022-12-20 09:25:25,502 DEBUG   HandlerThread:1135 [handler.py:handle_request():140] handle_request: stop_status
+2022-12-20 09:25:25,503 DEBUG   SenderThread:1135 [sender.py:send_request():250] send_request: stop_status
+2022-12-20 09:25:29,685 DEBUG   HandlerThread:1135 [handler.py:handle_request():140] handle_request: partial_history
+2022-12-20 09:25:31,450 INFO    Thread-12 :1135 [dir_watcher.py:_on_file_modified():286] file/dir modified: /home/dblab/git/ECOGAN/wandb/run-20221220_092451-3kql9ejn/files/output.log
+2022-12-20 09:25:33,451 INFO    Thread-12 :1135 [dir_watcher.py:_on_file_modified():286] file/dir modified: /home/dblab/git/ECOGAN/wandb/run-20221220_092451-3kql9ejn/files/output.log
+2022-12-20 09:25:40,724 DEBUG   HandlerThread:1135 [handler.py:handle_request():140] handle_request: stop_status
+2022-12-20 09:25:40,724 DEBUG   SenderThread:1135 [sender.py:send_request():250] send_request: stop_status
+2022-12-20 09:25:55,986 DEBUG   HandlerThread:1135 [handler.py:handle_request():140] handle_request: stop_status
+2022-12-20 09:25:55,986 DEBUG   SenderThread:1135 [sender.py:send_request():250] send_request: stop_status
+2022-12-20 09:26:00,070 DEBUG   SenderThread:1135 [sender.py:send():236] send: stats
+2022-12-20 09:26:11,228 DEBUG   HandlerThread:1135 [handler.py:handle_request():140] handle_request: stop_status
+2022-12-20 09:26:11,229 DEBUG   SenderThread:1135 [sender.py:send_request():250] send_request: stop_status
+2022-12-20 09:26:26,488 DEBUG   HandlerThread:1135 [handler.py:handle_request():140] handle_request: stop_status
+2022-12-20 09:26:26,489 DEBUG   SenderThread:1135 [sender.py:send_request():250] send_request: stop_status
+2022-12-20 09:26:37,492 DEBUG   SenderThread:1135 [sender.py:send():236] send: stats
+2022-12-20 09:26:41,714 DEBUG   HandlerThread:1135 [handler.py:handle_request():140] handle_request: stop_status
+2022-12-20 09:26:41,715 DEBUG   SenderThread:1135 [sender.py:send_request():250] send_request: stop_status
+2022-12-20 09:26:53,796 DEBUG   HandlerThread:1135 [handler.py:handle_request():140] handle_request: partial_history
+2022-12-20 09:26:53,838 DEBUG   HandlerThread:1135 [handler.py:handle_request():140] handle_request: partial_history
+2022-12-20 09:26:53,838 DEBUG   HandlerThread:1135 [handler.py:handle_request():140] handle_request: partial_history
+2022-12-20 09:26:53,839 DEBUG   HandlerThread:1135 [handler.py:handle_request():140] handle_request: partial_history
+2022-12-20 09:26:53,839 DEBUG   HandlerThread:1135 [handler.py:handle_request():140] handle_request: partial_history
+2022-12-20 09:26:53,839 WARNING HandlerThread:1135 [handler.py:handle_request_partial_history():527] Step 0 < 1. Dropping entry: {'vis_image': {'_type': 'histogram', 'values': [162112, 79182, 79115, 79677, 75392, 66813, 57592, 49869, 45384, 41875, 39355, 36639, 34603, 32791, 31402, 30541, 30422, 29829, 29410, 29022, 28307, 27723, 26633, 25357, 23865, 22031, 19495, 17219, 15012, 12343, 10617, 25105], 'bins': [0.0, 0.03125, 0.0625, 0.09375, 0.125, 0.15625, 0.1875, 0.21875, 0.25, 0.28125, 0.3125, 0.34375, 0.375, 0.40625, 0.4375, 0.46875, 0.5, 0.53125, 0.5625, 0.59375, 0.625, 0.65625, 0.6875, 0.71875, 0.75, 0.78125, 0.8125, 0.84375, 0.875, 0.90625, 0.9375, 0.96875, 1.0]}, '_timestamp': 1671528413, '_runtime': 122}.
+2022-12-20 09:26:56,511 INFO    Thread-12 :1135 [dir_watcher.py:_on_file_modified():286] file/dir modified: /home/dblab/git/ECOGAN/wandb/run-20221220_092451-3kql9ejn/files/output.log
+2022-12-20 09:26:56,984 DEBUG   HandlerThread:1135 [handler.py:handle_request():140] handle_request: stop_status
+2022-12-20 09:26:56,984 DEBUG   SenderThread:1135 [sender.py:send_request():250] send_request: stop_status
+2022-12-20 09:27:12,240 DEBUG   HandlerThread:1135 [handler.py:handle_request():140] handle_request: stop_status
+2022-12-20 09:27:12,240 DEBUG   SenderThread:1135 [sender.py:send_request():250] send_request: stop_status
+2022-12-20 09:27:13,972 DEBUG   SenderThread:1135 [sender.py:send():236] send: stats
+2022-12-20 09:27:27,466 DEBUG   HandlerThread:1135 [handler.py:handle_request():140] handle_request: stop_status
+2022-12-20 09:27:27,467 DEBUG   SenderThread:1135 [sender.py:send_request():250] send_request: stop_status
+2022-12-20 09:27:42,698 DEBUG   HandlerThread:1135 [handler.py:handle_request():140] handle_request: stop_status
+2022-12-20 09:27:42,703 DEBUG   SenderThread:1135 [sender.py:send_request():250] send_request: stop_status
+2022-12-20 09:27:50,503 DEBUG   SenderThread:1135 [sender.py:send():236] send: stats
+2022-12-20 09:27:54,192 DEBUG   HandlerThread:1135 [handler.py:handle_request():140] handle_request: partial_history
+2022-12-20 09:27:54,194 DEBUG   SenderThread:1135 [sender.py:send():236] send: history
+2022-12-20 09:27:54,195 DEBUG   SenderThread:1135 [sender.py:send():236] send: summary
+2022-12-20 09:27:54,195 INFO    SenderThread:1135 [sender.py:_save_file():952] saving file wandb-summary.json with policy end
+2022-12-20 09:27:54,233 DEBUG   HandlerThread:1135 [handler.py:handle_request():140] handle_request: partial_history
+2022-12-20 09:27:54,234 DEBUG   HandlerThread:1135 [handler.py:handle_request():140] handle_request: partial_history
+2022-12-20 09:27:54,234 DEBUG   HandlerThread:1135 [handler.py:handle_request():140] handle_request: partial_history
+2022-12-20 09:27:54,234 DEBUG   HandlerThread:1135 [handler.py:handle_request():140] handle_request: partial_history
+2022-12-20 09:27:54,234 WARNING HandlerThread:1135 [handler.py:handle_request_partial_history():527] Step 1 < 2. Dropping entry: {'vis_image': {'_type': 'histogram', 'values': [159699, 78348, 78408, 79671, 74532, 67254, 58318, 51107, 46075, 42715, 40091, 37916, 35879, 34093, 32464, 31363, 30695, 29880, 29083, 28800, 27813, 26702, 25584, 24436, 23081, 21216, 19198, 17078, 14867, 12833, 10416, 25117], 'bins': [0.0, 0.03125, 0.0625, 0.09375, 0.125, 0.15625, 0.1875, 0.21875, 0.25, 0.28125, 0.3125, 0.34375, 0.375, 0.40625, 0.4375, 0.46875, 0.5, 0.53125, 0.5625, 0.59375, 0.625, 0.65625, 0.6875, 0.71875, 0.75, 0.78125, 0.8125, 0.84375, 0.875, 0.90625, 0.9375, 0.96875, 1.0]}, '_timestamp': 1671528474, '_runtime': 183}.
+2022-12-20 09:27:54,552 INFO    Thread-12 :1135 [dir_watcher.py:_on_file_modified():286] file/dir modified: /home/dblab/git/ECOGAN/wandb/run-20221220_092451-3kql9ejn/files/wandb-summary.json
+2022-12-20 09:27:56,553 INFO    Thread-12 :1135 [dir_watcher.py:_on_file_modified():286] file/dir modified: /home/dblab/git/ECOGAN/wandb/run-20221220_092451-3kql9ejn/files/output.log
+2022-12-20 09:27:57,936 DEBUG   HandlerThread:1135 [handler.py:handle_request():140] handle_request: stop_status
+2022-12-20 09:27:57,936 DEBUG   SenderThread:1135 [sender.py:send_request():250] send_request: stop_status
+2022-12-20 09:28:13,199 DEBUG   HandlerThread:1135 [handler.py:handle_request():140] handle_request: stop_status
+2022-12-20 09:28:13,200 DEBUG   SenderThread:1135 [sender.py:send_request():250] send_request: stop_status
+2022-12-20 09:28:28,461 DEBUG   HandlerThread:1135 [handler.py:handle_request():140] handle_request: stop_status
+2022-12-20 09:28:28,462 DEBUG   SenderThread:1135 [sender.py:send_request():250] send_request: stop_status
+2022-12-20 09:28:28,976 DEBUG   SenderThread:1135 [sender.py:send():236] send: stats
+2022-12-20 09:28:43,689 DEBUG   HandlerThread:1135 [handler.py:handle_request():140] handle_request: stop_status
+2022-12-20 09:28:43,690 DEBUG   SenderThread:1135 [sender.py:send_request():250] send_request: stop_status
+2022-12-20 09:28:54,181 DEBUG   HandlerThread:1135 [handler.py:handle_request():140] handle_request: partial_history
+2022-12-20 09:28:54,182 DEBUG   SenderThread:1135 [sender.py:send():236] send: history
+2022-12-20 09:28:54,183 DEBUG   SenderThread:1135 [sender.py:send():236] send: summary
+2022-12-20 09:28:54,183 INFO    SenderThread:1135 [sender.py:_save_file():952] saving file wandb-summary.json with policy end
+2022-12-20 09:28:54,226 DEBUG   HandlerThread:1135 [handler.py:handle_request():140] handle_request: partial_history
+2022-12-20 09:28:54,226 DEBUG   HandlerThread:1135 [handler.py:handle_request():140] handle_request: partial_history
+2022-12-20 09:28:54,226 DEBUG   HandlerThread:1135 [handler.py:handle_request():140] handle_request: partial_history
+2022-12-20 09:28:54,227 DEBUG   HandlerThread:1135 [handler.py:handle_request():140] handle_request: partial_history
+2022-12-20 09:28:54,227 WARNING HandlerThread:1135 [handler.py:handle_request_partial_history():527] Step 2 < 3. Dropping entry: {'vis_image': {'_type': 'histogram', 'values': [156515, 76561, 76999, 79137, 73528, 67507, 59508, 52610, 48032, 44164, 41398, 39607, 37616, 35457, 33557, 32450, 31386, 30120, 28985, 28636, 27554, 26211, 25005, 23692, 22165, 20410, 18630, 16684, 14276, 12045, 9810, 24477], 'bins': [0.0, 0.03125, 0.0625, 0.09375, 0.125, 0.15625, 0.1875, 0.21875, 0.25, 0.28125, 0.3125, 0.34375, 0.375, 0.40625, 0.4375, 0.46875, 0.5, 0.53125, 0.5625, 0.59375, 0.625, 0.65625, 0.6875, 0.71875, 0.75, 0.78125, 0.8125, 0.84375, 0.875, 0.90625, 0.9375, 0.96875, 1.0]}, '_timestamp': 1671528534, '_runtime': 243}.
+2022-12-20 09:28:54,581 INFO    Thread-12 :1135 [dir_watcher.py:_on_file_modified():286] file/dir modified: /home/dblab/git/ECOGAN/wandb/run-20221220_092451-3kql9ejn/files/output.log
+2022-12-20 09:28:54,581 INFO    Thread-12 :1135 [dir_watcher.py:_on_file_modified():286] file/dir modified: /home/dblab/git/ECOGAN/wandb/run-20221220_092451-3kql9ejn/files/wandb-summary.json
+2022-12-20 09:28:55,370 DEBUG   SenderThread:1135 [sender.py:send():236] send: exit
+2022-12-20 09:28:55,370 INFO    SenderThread:1135 [sender.py:send_exit():372] handling exit code: 0
+2022-12-20 09:28:55,371 INFO    SenderThread:1135 [sender.py:send_exit():374] handling runtime: 243
+2022-12-20 09:28:55,371 DEBUG   HandlerThread:1135 [handler.py:handle_request():140] handle_request: poll_exit
+2022-12-20 09:28:55,372 INFO    SenderThread:1135 [sender.py:_save_file():952] saving file wandb-summary.json with policy end
+2022-12-20 09:28:55,372 INFO    SenderThread:1135 [sender.py:send_exit():380] send defer
+2022-12-20 09:28:55,373 DEBUG   SenderThread:1135 [sender.py:send_request():250] send_request: poll_exit
+2022-12-20 09:28:55,374 DEBUG   HandlerThread:1135 [handler.py:handle_request():140] handle_request: defer
+2022-12-20 09:28:55,374 INFO    HandlerThread:1135 [handler.py:handle_request_defer():163] handle defer: 0
+2022-12-20 09:28:55,375 DEBUG   SenderThread:1135 [sender.py:send_request():250] send_request: defer
+2022-12-20 09:28:55,375 INFO    SenderThread:1135 [sender.py:send_request_defer():389] handle sender defer: 0
+2022-12-20 09:28:55,375 INFO    SenderThread:1135 [sender.py:transition_state():393] send defer: 1
+2022-12-20 09:28:55,376 DEBUG   HandlerThread:1135 [handler.py:handle_request():140] handle_request: defer
+2022-12-20 09:28:55,376 INFO    HandlerThread:1135 [handler.py:handle_request_defer():163] handle defer: 1
+2022-12-20 09:28:55,581 INFO    Thread-12 :1135 [dir_watcher.py:_on_file_modified():286] file/dir modified: /home/dblab/git/ECOGAN/wandb/run-20221220_092451-3kql9ejn/files/wandb-summary.json
+2022-12-20 09:28:55,606 DEBUG   SenderThread:1135 [sender.py:send_request():250] send_request: defer
+2022-12-20 09:28:55,607 INFO    SenderThread:1135 [sender.py:send_request_defer():389] handle sender defer: 1
+2022-12-20 09:28:55,607 INFO    SenderThread:1135 [sender.py:transition_state():393] send defer: 2
+2022-12-20 09:28:55,607 DEBUG   HandlerThread:1135 [handler.py:handle_request():140] handle_request: poll_exit
+2022-12-20 09:28:55,607 DEBUG   SenderThread:1135 [sender.py:send_request():250] send_request: poll_exit
+2022-12-20 09:28:55,608 DEBUG   SenderThread:1135 [sender.py:send():236] send: stats
+2022-12-20 09:28:55,608 DEBUG   HandlerThread:1135 [handler.py:handle_request():140] handle_request: defer
+2022-12-20 09:28:55,610 INFO    HandlerThread:1135 [handler.py:handle_request_defer():163] handle defer: 2
+2022-12-20 09:28:55,611 DEBUG   SenderThread:1135 [sender.py:send():236] send: history
+2022-12-20 09:28:55,612 DEBUG   SenderThread:1135 [sender.py:send():236] send: summary
+2022-12-20 09:28:55,612 INFO    SenderThread:1135 [sender.py:_save_file():952] saving file wandb-summary.json with policy end
+2022-12-20 09:28:55,613 DEBUG   SenderThread:1135 [sender.py:send_request():250] send_request: defer
+2022-12-20 09:28:55,613 INFO    SenderThread:1135 [sender.py:send_request_defer():389] handle sender defer: 2
+2022-12-20 09:28:55,613 INFO    SenderThread:1135 [sender.py:transition_state():393] send defer: 3
+2022-12-20 09:28:55,613 DEBUG   HandlerThread:1135 [handler.py:handle_request():140] handle_request: defer
+2022-12-20 09:28:55,614 INFO    HandlerThread:1135 [handler.py:handle_request_defer():163] handle defer: 3
+2022-12-20 09:28:55,614 DEBUG   SenderThread:1135 [sender.py:send_request():250] send_request: defer
+2022-12-20 09:28:55,614 INFO    SenderThread:1135 [sender.py:send_request_defer():389] handle sender defer: 3
+2022-12-20 09:28:55,614 INFO    SenderThread:1135 [sender.py:transition_state():393] send defer: 4
+2022-12-20 09:28:55,615 DEBUG   HandlerThread:1135 [handler.py:handle_request():140] handle_request: defer
+2022-12-20 09:28:55,615 INFO    HandlerThread:1135 [handler.py:handle_request_defer():163] handle defer: 4
+2022-12-20 09:28:55,615 DEBUG   SenderThread:1135 [sender.py:send():236] send: summary
+2022-12-20 09:28:55,616 INFO    SenderThread:1135 [sender.py:_save_file():952] saving file wandb-summary.json with policy end
+2022-12-20 09:28:55,616 DEBUG   SenderThread:1135 [sender.py:send_request():250] send_request: defer
+2022-12-20 09:28:55,617 INFO    SenderThread:1135 [sender.py:send_request_defer():389] handle sender defer: 4
+2022-12-20 09:28:55,617 INFO    SenderThread:1135 [sender.py:transition_state():393] send defer: 5
+2022-12-20 09:28:55,617 DEBUG   HandlerThread:1135 [handler.py:handle_request():140] handle_request: defer
+2022-12-20 09:28:55,617 INFO    HandlerThread:1135 [handler.py:handle_request_defer():163] handle defer: 5
+2022-12-20 09:28:55,618 DEBUG   SenderThread:1135 [sender.py:send_request():250] send_request: defer
+2022-12-20 09:28:55,618 INFO    SenderThread:1135 [sender.py:send_request_defer():389] handle sender defer: 5
+2022-12-20 09:28:55,618 INFO    SenderThread:1135 [sender.py:transition_state():393] send defer: 6
+2022-12-20 09:28:55,618 DEBUG   HandlerThread:1135 [handler.py:handle_request():140] handle_request: defer
+2022-12-20 09:28:55,618 INFO    HandlerThread:1135 [handler.py:handle_request_defer():163] handle defer: 6
+2022-12-20 09:28:55,619 DEBUG   SenderThread:1135 [sender.py:send_request():250] send_request: defer
+2022-12-20 09:28:55,619 INFO    SenderThread:1135 [sender.py:send_request_defer():389] handle sender defer: 6
+2022-12-20 09:28:55,619 INFO    SenderThread:1135 [dir_watcher.py:finish():353] shutting down directory watcher
+2022-12-20 09:28:55,712 DEBUG   HandlerThread:1135 [handler.py:handle_request():140] handle_request: poll_exit
+2022-12-20 09:28:56,582 INFO    Thread-12 :1135 [dir_watcher.py:_on_file_modified():286] file/dir modified: /home/dblab/git/ECOGAN/wandb/run-20221220_092451-3kql9ejn/files/wandb-summary.json
+2022-12-20 09:28:56,583 INFO    SenderThread:1135 [dir_watcher.py:finish():383] scan: /home/dblab/git/ECOGAN/wandb/run-20221220_092451-3kql9ejn/files
+2022-12-20 09:28:56,584 INFO    SenderThread:1135 [dir_watcher.py:finish():397] scan save: /home/dblab/git/ECOGAN/wandb/run-20221220_092451-3kql9ejn/files/requirements.txt requirements.txt
+2022-12-20 09:28:56,584 INFO    SenderThread:1135 [dir_watcher.py:finish():397] scan save: /home/dblab/git/ECOGAN/wandb/run-20221220_092451-3kql9ejn/files/output.log output.log
+2022-12-20 09:28:56,584 INFO    SenderThread:1135 [dir_watcher.py:finish():397] scan save: /home/dblab/git/ECOGAN/wandb/run-20221220_092451-3kql9ejn/files/wandb-summary.json wandb-summary.json
+2022-12-20 09:28:56,597 INFO    SenderThread:1135 [dir_watcher.py:finish():397] scan save: /home/dblab/git/ECOGAN/wandb/run-20221220_092451-3kql9ejn/files/wandb-metadata.json wandb-metadata.json
+2022-12-20 09:28:56,597 INFO    SenderThread:1135 [dir_watcher.py:finish():397] scan save: /home/dblab/git/ECOGAN/wandb/run-20221220_092451-3kql9ejn/files/conda-environment.yaml conda-environment.yaml
+2022-12-20 09:28:56,598 INFO    SenderThread:1135 [dir_watcher.py:finish():397] scan save: /home/dblab/git/ECOGAN/wandb/run-20221220_092451-3kql9ejn/files/config.yaml config.yaml
+2022-12-20 09:28:56,599 INFO    SenderThread:1135 [sender.py:transition_state():393] send defer: 7
+2022-12-20 09:28:56,607 DEBUG   SenderThread:1135 [sender.py:send_request():250] send_request: poll_exit
+2022-12-20 09:28:56,614 DEBUG   HandlerThread:1135 [handler.py:handle_request():140] handle_request: defer
+2022-12-20 09:28:56,615 INFO    HandlerThread:1135 [handler.py:handle_request_defer():163] handle defer: 7
+2022-12-20 09:28:56,615 DEBUG   SenderThread:1135 [sender.py:send_request():250] send_request: defer
+2022-12-20 09:28:56,615 INFO    SenderThread:1135 [sender.py:send_request_defer():389] handle sender defer: 7
+2022-12-20 09:28:56,620 INFO    SenderThread:1135 [file_pusher.py:finish():171] shutting down file pusher
+2022-12-20 09:28:56,716 DEBUG   HandlerThread:1135 [handler.py:handle_request():140] handle_request: poll_exit
+2022-12-20 09:28:56,716 DEBUG   SenderThread:1135 [sender.py:send_request():250] send_request: poll_exit
+2022-12-20 09:28:56,818 DEBUG   HandlerThread:1135 [handler.py:handle_request():140] handle_request: poll_exit
+2022-12-20 09:28:56,818 DEBUG   SenderThread:1135 [sender.py:send_request():250] send_request: poll_exit
+2022-12-20 09:28:56,920 DEBUG   HandlerThread:1135 [handler.py:handle_request():140] handle_request: poll_exit
+2022-12-20 09:28:56,920 DEBUG   SenderThread:1135 [sender.py:send_request():250] send_request: poll_exit
+2022-12-20 09:28:57,022 DEBUG   HandlerThread:1135 [handler.py:handle_request():140] handle_request: poll_exit
+2022-12-20 09:28:57,023 DEBUG   SenderThread:1135 [sender.py:send_request():250] send_request: poll_exit
+2022-12-20 09:28:57,125 DEBUG   HandlerThread:1135 [handler.py:handle_request():140] handle_request: poll_exit
+2022-12-20 09:28:57,125 DEBUG   SenderThread:1135 [sender.py:send_request():250] send_request: poll_exit
+2022-12-20 09:28:57,227 DEBUG   HandlerThread:1135 [handler.py:handle_request():140] handle_request: poll_exit
+2022-12-20 09:28:57,227 DEBUG   SenderThread:1135 [sender.py:send_request():250] send_request: poll_exit
+2022-12-20 09:28:57,329 DEBUG   HandlerThread:1135 [handler.py:handle_request():140] handle_request: poll_exit
+2022-12-20 09:28:57,329 DEBUG   SenderThread:1135 [sender.py:send_request():250] send_request: poll_exit
+2022-12-20 09:28:57,356 INFO    Thread-18 :1135 [upload_job.py:push():138] Uploaded file /home/dblab/git/ECOGAN/wandb/run-20221220_092451-3kql9ejn/files/output.log
+2022-12-20 09:28:57,366 INFO    Thread-21 :1135 [upload_job.py:push():138] Uploaded file /home/dblab/git/ECOGAN/wandb/run-20221220_092451-3kql9ejn/files/config.yaml
+2022-12-20 09:28:57,433 INFO    Thread-19 :1135 [upload_job.py:push():138] Uploaded file /home/dblab/git/ECOGAN/wandb/run-20221220_092451-3kql9ejn/files/wandb-summary.json
+2022-12-20 09:28:57,434 DEBUG   HandlerThread:1135 [handler.py:handle_request():140] handle_request: poll_exit
+2022-12-20 09:28:57,434 DEBUG   SenderThread:1135 [sender.py:send_request():250] send_request: poll_exit
+2022-12-20 09:28:57,448 INFO    Thread-20 :1135 [upload_job.py:push():138] Uploaded file /home/dblab/git/ECOGAN/wandb/run-20221220_092451-3kql9ejn/files/conda-environment.yaml
+2022-12-20 09:28:57,477 INFO    Thread-17 :1135 [upload_job.py:push():138] Uploaded file /home/dblab/git/ECOGAN/wandb/run-20221220_092451-3kql9ejn/files/requirements.txt
+2022-12-20 09:28:57,536 DEBUG   HandlerThread:1135 [handler.py:handle_request():140] handle_request: poll_exit
+2022-12-20 09:28:57,536 DEBUG   SenderThread:1135 [sender.py:send_request():250] send_request: poll_exit
+2022-12-20 09:28:57,638 DEBUG   HandlerThread:1135 [handler.py:handle_request():140] handle_request: poll_exit
+2022-12-20 09:28:57,639 DEBUG   SenderThread:1135 [sender.py:send_request():250] send_request: poll_exit
+2022-12-20 09:28:57,678 INFO    Thread-11 :1135 [sender.py:transition_state():393] send defer: 8
+2022-12-20 09:28:57,679 DEBUG   HandlerThread:1135 [handler.py:handle_request():140] handle_request: defer
+2022-12-20 09:28:57,679 INFO    HandlerThread:1135 [handler.py:handle_request_defer():163] handle defer: 8
+2022-12-20 09:28:57,679 DEBUG   SenderThread:1135 [sender.py:send_request():250] send_request: defer
+2022-12-20 09:28:57,679 INFO    SenderThread:1135 [sender.py:send_request_defer():389] handle sender defer: 8
+2022-12-20 09:28:57,740 DEBUG   HandlerThread:1135 [handler.py:handle_request():140] handle_request: poll_exit
+2022-12-20 09:28:58,313 INFO    SenderThread:1135 [sender.py:transition_state():393] send defer: 9
+2022-12-20 09:28:58,313 DEBUG   SenderThread:1135 [sender.py:send_request():250] send_request: poll_exit
+2022-12-20 09:28:58,314 DEBUG   HandlerThread:1135 [handler.py:handle_request():140] handle_request: defer
+2022-12-20 09:28:58,314 INFO    HandlerThread:1135 [handler.py:handle_request_defer():163] handle defer: 9
+2022-12-20 09:28:58,315 DEBUG   SenderThread:1135 [sender.py:send_request():250] send_request: defer
+2022-12-20 09:28:58,315 INFO    SenderThread:1135 [sender.py:send_request_defer():389] handle sender defer: 9
+2022-12-20 09:28:58,315 INFO    SenderThread:1135 [sender.py:transition_state():393] send defer: 10
+2022-12-20 09:28:58,316 DEBUG   SenderThread:1135 [sender.py:send():236] send: final
+2022-12-20 09:28:58,316 DEBUG   SenderThread:1135 [sender.py:send():236] send: footer
+2022-12-20 09:28:58,317 DEBUG   HandlerThread:1135 [handler.py:handle_request():140] handle_request: defer
+2022-12-20 09:28:58,317 INFO    HandlerThread:1135 [handler.py:handle_request_defer():163] handle defer: 10
+2022-12-20 09:28:58,317 DEBUG   SenderThread:1135 [sender.py:send_request():250] send_request: defer
+2022-12-20 09:28:58,317 INFO    SenderThread:1135 [sender.py:send_request_defer():389] handle sender defer: 10
+2022-12-20 09:28:58,415 DEBUG   HandlerThread:1135 [handler.py:handle_request():140] handle_request: poll_exit
+2022-12-20 09:28:58,416 DEBUG   SenderThread:1135 [sender.py:send_request():250] send_request: poll_exit
+2022-12-20 09:28:58,417 INFO    SenderThread:1135 [file_pusher.py:join():176] waiting for file pusher
+2022-12-20 09:28:58,945 DEBUG   HandlerThread:1135 [handler.py:handle_request():140] handle_request: sampled_history
+2022-12-20 09:28:58,947 DEBUG   HandlerThread:1135 [handler.py:handle_request():140] handle_request: get_summary
+2022-12-20 09:28:58,948 INFO    MainThread:1135 [wandb_run.py:_footer_history_summary_info():3099] rendering history
+2022-12-20 09:28:58,949 INFO    MainThread:1135 [wandb_run.py:_footer_history_summary_info():3131] rendering summary
+2022-12-20 09:28:58,949 INFO    MainThread:1135 [wandb_run.py:_footer_sync_info():3055] logging synced files
+2022-12-20 09:28:58,950 DEBUG   HandlerThread:1135 [handler.py:handle_request():140] handle_request: shutdown
+2022-12-20 09:28:58,950 INFO    HandlerThread:1135 [handler.py:finish():806] shutting down handler
+2022-12-20 09:28:59,317 INFO    WriterThread:1135 [datastore.py:close():279] close: /home/dblab/git/ECOGAN/wandb/run-20221220_092451-3kql9ejn/run-3kql9ejn.wandb
+2022-12-20 09:28:59,844 INFO    SenderThread:1135 [sender.py:finish():1114] shutting down sender
+2022-12-20 09:28:59,844 INFO    SenderThread:1135 [file_pusher.py:finish():171] shutting down file pusher
+2022-12-20 09:28:59,844 INFO    SenderThread:1135 [file_pusher.py:join():176] waiting for file pusher
+2022-12-20 09:28:59,954 INFO    MainThread:1135 [internal.py:handle_exit():80] Internal process exited

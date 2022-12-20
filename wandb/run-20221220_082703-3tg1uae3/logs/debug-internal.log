@@ -1,0 +1,76 @@
+2022-12-20 08:27:06,105 INFO    MainThread:29224 [internal.py:wandb_internal():93] W&B internal server running at pid: 29224, started at: 2022-12-20 08:27:06.104606
+2022-12-20 08:27:06,117 INFO    WriterThread:29224 [datastore.py:open_for_write():75] open: /home/dblab/git/ECOGAN/wandb/run-20221220_082703-3tg1uae3/run-3tg1uae3.wandb
+2022-12-20 08:27:06,126 DEBUG   SenderThread:29224 [sender.py:send():236] send: header
+2022-12-20 08:27:06,126 DEBUG   SenderThread:29224 [sender.py:send():236] send: run
+2022-12-20 08:27:06,434 DEBUG   HandlerThread:29224 [handler.py:handle_request():140] handle_request: check_version
+2022-12-20 08:27:06,442 INFO    SenderThread:29224 [dir_watcher.py:__init__():216] watching files in: /home/dblab/git/ECOGAN/wandb/run-20221220_082703-3tg1uae3/files
+2022-12-20 08:27:06,442 INFO    SenderThread:29224 [sender.py:_start_run_threads():818] run started: 3tg1uae3 with start time 1671524823
+2022-12-20 08:27:06,442 DEBUG   SenderThread:29224 [sender.py:send():236] send: summary
+2022-12-20 08:27:06,444 INFO    SenderThread:29224 [sender.py:_save_file():952] saving file wandb-summary.json with policy end
+2022-12-20 08:27:06,445 DEBUG   SenderThread:29224 [sender.py:send_request():250] send_request: check_version
+2022-12-20 08:27:06,531 DEBUG   HandlerThread:29224 [handler.py:handle_request():140] handle_request: run_start
+2022-12-20 08:27:06,540 DEBUG   HandlerThread:29224 [meta.py:__init__():35] meta init
+2022-12-20 08:27:06,540 DEBUG   HandlerThread:29224 [meta.py:__init__():49] meta init done
+2022-12-20 08:27:06,541 DEBUG   HandlerThread:29224 [meta.py:probe():209] probe
+2022-12-20 08:27:06,552 DEBUG   HandlerThread:29224 [meta.py:_setup_git():199] setup git
+2022-12-20 08:27:06,584 DEBUG   HandlerThread:29224 [meta.py:_setup_git():206] setup git done
+2022-12-20 08:27:06,584 DEBUG   HandlerThread:29224 [meta.py:_save_pip():53] save pip
+2022-12-20 08:27:06,586 DEBUG   HandlerThread:29224 [meta.py:_save_pip():67] save pip done
+2022-12-20 08:27:06,586 DEBUG   HandlerThread:29224 [meta.py:_save_conda():74] save conda
+2022-12-20 08:27:07,454 INFO    Thread-13 :29224 [dir_watcher.py:_on_file_created():269] file/dir created: /home/dblab/git/ECOGAN/wandb/run-20221220_082703-3tg1uae3/files/wandb-summary.json
+2022-12-20 08:27:07,455 INFO    Thread-13 :29224 [dir_watcher.py:_on_file_created():269] file/dir created: /home/dblab/git/ECOGAN/wandb/run-20221220_082703-3tg1uae3/files/requirements.txt
+2022-12-20 08:27:07,456 INFO    Thread-13 :29224 [dir_watcher.py:_on_file_created():269] file/dir created: /home/dblab/git/ECOGAN/wandb/run-20221220_082703-3tg1uae3/files/conda-environment.yaml
+2022-12-20 08:27:09,701 DEBUG   HandlerThread:29224 [meta.py:_save_conda():84] save conda done
+2022-12-20 08:27:09,702 DEBUG   HandlerThread:29224 [meta.py:probe():247] probe done
+2022-12-20 08:27:09,831 DEBUG   SenderThread:29224 [sender.py:send():236] send: files
+2022-12-20 08:27:09,833 INFO    SenderThread:29224 [sender.py:_save_file():952] saving file wandb-metadata.json with policy now
+2022-12-20 08:27:09,856 DEBUG   HandlerThread:29224 [handler.py:handle_request():140] handle_request: stop_status
+2022-12-20 08:27:09,857 DEBUG   SenderThread:29224 [sender.py:send_request():250] send_request: stop_status
+2022-12-20 08:27:10,092 DEBUG   SenderThread:29224 [sender.py:send():236] send: telemetry
+2022-12-20 08:27:10,446 INFO    Thread-13 :29224 [dir_watcher.py:_on_file_modified():286] file/dir modified: /home/dblab/git/ECOGAN/wandb/run-20221220_082703-3tg1uae3/files/conda-environment.yaml
+2022-12-20 08:27:10,447 INFO    Thread-13 :29224 [dir_watcher.py:_on_file_created():269] file/dir created: /home/dblab/git/ECOGAN/wandb/run-20221220_082703-3tg1uae3/files/output.log
+2022-12-20 08:27:10,448 INFO    Thread-13 :29224 [dir_watcher.py:_on_file_created():269] file/dir created: /home/dblab/git/ECOGAN/wandb/run-20221220_082703-3tg1uae3/files/wandb-metadata.json
+2022-12-20 08:27:10,737 INFO    Thread-17 :29224 [upload_job.py:push():138] Uploaded file /tmp/tmppzc0yvk6wandb/2z2o3z0v-wandb-metadata.json
+2022-12-20 08:27:25,095 DEBUG   HandlerThread:29224 [handler.py:handle_request():140] handle_request: stop_status
+2022-12-20 08:27:25,097 DEBUG   SenderThread:29224 [sender.py:send_request():250] send_request: stop_status
+2022-12-20 08:27:37,469 INFO    Thread-13 :29224 [dir_watcher.py:_on_file_modified():286] file/dir modified: /home/dblab/git/ECOGAN/wandb/run-20221220_082703-3tg1uae3/files/config.yaml
+2022-12-20 08:27:39,123 DEBUG   SenderThread:29224 [sender.py:send():236] send: stats
+2022-12-20 08:27:40,337 DEBUG   HandlerThread:29224 [handler.py:handle_request():140] handle_request: stop_status
+2022-12-20 08:27:40,338 DEBUG   SenderThread:29224 [sender.py:send_request():250] send_request: stop_status
+2022-12-20 08:27:55,574 DEBUG   HandlerThread:29224 [handler.py:handle_request():140] handle_request: stop_status
+2022-12-20 08:27:55,575 DEBUG   SenderThread:29224 [sender.py:send_request():250] send_request: stop_status
+2022-12-20 08:28:10,852 DEBUG   HandlerThread:29224 [handler.py:handle_request():140] handle_request: stop_status
+2022-12-20 08:28:10,853 DEBUG   SenderThread:29224 [sender.py:send_request():250] send_request: stop_status
+2022-12-20 08:28:13,849 DEBUG   SenderThread:29224 [sender.py:send():236] send: stats
+2022-12-20 08:28:17,414 DEBUG   HandlerThread:29224 [handler.py:handle_request():140] handle_request: partial_history
+2022-12-20 08:28:18,503 INFO    Thread-13 :29224 [dir_watcher.py:_on_file_modified():286] file/dir modified: /home/dblab/git/ECOGAN/wandb/run-20221220_082703-3tg1uae3/files/output.log
+2022-12-20 08:28:20,505 INFO    Thread-13 :29224 [dir_watcher.py:_on_file_modified():286] file/dir modified: /home/dblab/git/ECOGAN/wandb/run-20221220_082703-3tg1uae3/files/output.log
+2022-12-20 08:28:26,090 DEBUG   HandlerThread:29224 [handler.py:handle_request():140] handle_request: stop_status
+2022-12-20 08:28:26,091 DEBUG   SenderThread:29224 [sender.py:send_request():250] send_request: stop_status
+2022-12-20 08:28:41,325 DEBUG   HandlerThread:29224 [handler.py:handle_request():140] handle_request: stop_status
+2022-12-20 08:28:41,326 DEBUG   SenderThread:29224 [sender.py:send_request():250] send_request: stop_status
+2022-12-20 08:28:48,514 DEBUG   SenderThread:29224 [sender.py:send():236] send: stats
+2022-12-20 08:28:56,564 DEBUG   HandlerThread:29224 [handler.py:handle_request():140] handle_request: stop_status
+2022-12-20 08:28:56,565 DEBUG   SenderThread:29224 [sender.py:send_request():250] send_request: stop_status
+2022-12-20 08:29:11,852 DEBUG   HandlerThread:29224 [handler.py:handle_request():140] handle_request: stop_status
+2022-12-20 08:29:11,853 DEBUG   SenderThread:29224 [sender.py:send_request():250] send_request: stop_status
+2022-12-20 08:29:23,288 DEBUG   SenderThread:29224 [sender.py:send():236] send: stats
+2022-12-20 08:29:27,090 DEBUG   HandlerThread:29224 [handler.py:handle_request():140] handle_request: stop_status
+2022-12-20 08:29:27,091 DEBUG   SenderThread:29224 [sender.py:send_request():250] send_request: stop_status
+2022-12-20 08:29:42,322 DEBUG   HandlerThread:29224 [handler.py:handle_request():140] handle_request: stop_status
+2022-12-20 08:29:42,323 DEBUG   SenderThread:29224 [sender.py:send_request():250] send_request: stop_status
+2022-12-20 08:29:57,590 DEBUG   HandlerThread:29224 [handler.py:handle_request():140] handle_request: stop_status
+2022-12-20 08:29:57,591 DEBUG   SenderThread:29224 [sender.py:send_request():250] send_request: stop_status
+2022-12-20 08:29:58,034 DEBUG   SenderThread:29224 [sender.py:send():236] send: stats
+2022-12-20 08:30:12,829 DEBUG   HandlerThread:29224 [handler.py:handle_request():140] handle_request: stop_status
+2022-12-20 08:30:12,830 DEBUG   SenderThread:29224 [sender.py:send_request():250] send_request: stop_status
+2022-12-20 08:30:28,069 DEBUG   HandlerThread:29224 [handler.py:handle_request():140] handle_request: stop_status
+2022-12-20 08:30:28,070 DEBUG   SenderThread:29224 [sender.py:send_request():250] send_request: stop_status
+2022-12-20 08:30:32,754 DEBUG   SenderThread:29224 [sender.py:send():236] send: stats
+2022-12-20 08:30:43,306 DEBUG   HandlerThread:29224 [handler.py:handle_request():140] handle_request: stop_status
+2022-12-20 08:30:43,306 DEBUG   SenderThread:29224 [sender.py:send_request():250] send_request: stop_status
+2022-12-20 08:30:58,538 DEBUG   HandlerThread:29224 [handler.py:handle_request():140] handle_request: stop_status
+2022-12-20 08:30:58,538 DEBUG   SenderThread:29224 [sender.py:send_request():250] send_request: stop_status
+2022-12-20 08:31:07,463 DEBUG   SenderThread:29224 [sender.py:send():236] send: stats
+2022-12-20 08:31:13,820 DEBUG   HandlerThread:29224 [handler.py:handle_request():140] handle_request: stop_status
+2022-12-20 08:31:13,820 DEBUG   SenderThread:29224 [sender.py:send_request():250] send_request: stop_status
