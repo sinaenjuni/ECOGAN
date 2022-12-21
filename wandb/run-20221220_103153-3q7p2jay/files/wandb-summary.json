@@ -1,1 +1,1 @@
-{"loss/ae": 0.0503183276951313, "_timestamp": 1671532558, "_runtime": 245, "_step": 149}
+{"loss/ae": 0.05020950401822726, "_timestamp": 1671607706, "_runtime": 75393, "_step": 34000, "fid": 165.19667218766676, "ins": 1.9541975259780884, "loss/d": 0.17756810784339905, "loss/g": 6.172149658203125, "vis_image": {"_type": "image-file", "sha256": "77edd96daf125f1116b2e32c9eb79258c980dc9f3f606e3e81b21fc69a10c4b3", "size": 745984, "path": "media/images/vis_image_34000_77edd96daf125f1116b2.png", "format": "png", "width": 662, "height": 662}}

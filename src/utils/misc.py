@@ -85,7 +85,7 @@ def fix_seed(seed):
 
 def setup(rank, world_size, backend="nccl"):
     os.environ['MASTER_ADDR'] = 'localhost'
-    os.environ['MASTER_PORT'] = '12355'
+    os.environ['MASTER_PORT'] = '12358'
 
     # initialize the process group
     # dist.init_process_group(backend=backend,
