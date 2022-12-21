@@ -2,3 +2,5 @@
 .idea/*
 .xml*
 .imloutgenbuildrebel.xml
+*.png
+*.pth
