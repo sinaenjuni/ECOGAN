@@ -6,3 +6,5 @@
 *.pth
 *wandb*
 *.wandb
+*.h5py
+wandb/

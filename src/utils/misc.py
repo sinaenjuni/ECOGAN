@@ -116,3 +116,11 @@ def setup_for_distributed(is_master):
             builtin_print(*args, **kwargs)
     __builtin__.print = print
     
+    
+def print_h5py(f, p=0):
+    for n, v in f.items():
+        print('\t'*p+n)
+        if hasattr(v, 'items'):
+            print_h5py(v, p+1)
+        else:
+            print('\t'*p+str(v.shape))
