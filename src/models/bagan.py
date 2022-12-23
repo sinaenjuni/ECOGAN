@@ -116,7 +116,7 @@ def evaluate(data_loader, G, eval_model, calc_mean_cov, mu_real, sigma_real, wor
     G.train()
     return fid, ins
 
-def pre_training(data_loader, logger, world_size, rank, args):
+def pre_training(data_loader, world_size, rank, args):
     encoder = Encoder(img_dim=args.img_dim, latent_dim=args.latent_dim).to(rank)
     decoder = Decoder(img_dim=args.img_dim, latent_dim=args.latent_dim).to(rank)
     
@@ -164,8 +164,9 @@ def pre_training(data_loader, logger, world_size, rank, args):
             f'best epoch: {best_epoch}, '
             f'best loss: {best_losses}')
         
-        if logger is not None:
-            logger.log({'loss/ae':losses}, step=epoch+1)
+        # if logger is not None:
+        if args.logger and rank==0:
+            wandb.log({'loss/ae':losses}, step=epoch+1)
         losses = 0
         
     print(f"[AE] best epoch: {epoch+1}, loss: {best_losses}")
@@ -176,8 +177,8 @@ def pre_training(data_loader, logger, world_size, rank, args):
     return best_encoder, best_decoder
 
 
-def training(data_loader, logger, world_size, rank, args):
-    encoder, decoder = pre_training(data_loader, logger, world_size, rank, args)
+def training(data_loader, world_size, rank, args):
+    encoder, decoder = pre_training(data_loader, world_size, rank, args)
     calc_mean_cov = ClassCondLatentGen(rank=rank)
     calc_mean_cov.stacking(data_loader, encoder)
     
@@ -256,6 +257,12 @@ def training(data_loader, logger, world_size, rank, args):
         loss_g.backward()
         optimizer_g.step()
         
+        if (step+1) % 100 == 0:
+            print(f'[GAN] step: {step+1}/{args.steps}({((step+1) / args.steps)*100:.2f}%), '
+                    f'time: {misc.elapsed_time(start_time)}, '
+                    f'loss D: {loss_d.item()}, '
+                    f'loss G: {loss_g.item()}')
+        
         
         if (step+1) % 2000 == 0:
             fid, ins = evaluate(data_loader=data_loader, 
@@ -288,12 +295,13 @@ def training(data_loader, logger, world_size, rank, args):
             grid = make_grid(vis_image, normalize=False, nrow=10)
             # print(grid.size())
             
-            if logger is not None:
-                logger.log({'fid': fid}, step=step+1)
-                logger.log({'ins': ins}, step=step+1)
-                logger.log({'loss/d': loss_d.item()}, step=step+1)
-                logger.log({'loss/g': loss_g.item()}, step=step+1)
-                logger.log({'vis_image': wandb.Image(grid)}, step+1)
+            # if logger is not None:
+            if args.logger and rank==0:
+                wandb.log({'fid': fid}, step=step+1)
+                wandb.log({'ins': ins}, step=step+1)
+                wandb.log({'loss/d': loss_d.item()}, step=step+1)
+                wandb.log({'loss/g': loss_g.item()}, step=step+1)
+                wandb.log({'vis_image': wandb.Image(grid)}, step+1)
 
             G.train()
             D.train()

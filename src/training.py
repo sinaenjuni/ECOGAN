@@ -24,10 +24,8 @@ def worker(rank, world_size, args):
         misc.fix_seed(rank)
         
     if args.logger and rank==0:
-        wandb.require("service")
-        logger = wandb.init(project="bagan", entity="sinaenjuni", config=args)
-    else:
-        logger = None
+        wandb.init(project="bagan", entity="sinaenjuni", config=args)
+
  
     transforms = Compose([ToTensor(),
                         Resize(64),
@@ -56,15 +54,12 @@ def worker(rank, world_size, args):
     model_module = importlib.import_module(f'models.{args.model}')
     # getattr(model_module, 'pre_training')(loader_train, logger, world_size, rank, args)
     
-    getattr(model_module, 'training')(loader_train, logger, world_size=world_size, rank=rank, args=args)
+    getattr(model_module, 'training')(loader_train, world_size=world_size, rank=rank, args=args)
 
     # print("@@@@@", model_module)
  
  
     misc.cleanup()
-
-
-
 
 
 

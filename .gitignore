@@ -4,3 +4,5 @@
 .imloutgenbuildrebel.xml
 *.png
 *.pth
+*wandb*
+*.wandb
