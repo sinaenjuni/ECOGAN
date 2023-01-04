@@ -1,8 +1,0 @@
-[AE] epoch: 1/1(100.00%), time: 0:00:30, loss: 0.39578833027058336, best epoch: 1, best loss: 0.39578833027058336
-[AE] best epoch: 1, loss: 0.39578833027058336
-Saving the ae weights.
-Stacking BAGAN AE features
-Using cache found in /home/dblab/.cache/torch/hub/pytorch_vision_v0.10.0
-Finish stacking BAGAN AE features
-<All keys matched successfully>
-_IncompatibleKeys(missing_keys=['module.adv.1.weight', 'module.adv.1.bias'], unexpected_keys=['module.linear.1.weight', 'module.linear.1.bias'])
