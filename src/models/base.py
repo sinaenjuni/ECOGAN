@@ -1,0 +1,192 @@
+import torch
+import torch.nn as nn
+import torch.nn.functional as F
+
+def initialize_weights(m):
+    if isinstance(m, nn.Conv2d):
+        nn.init.normal_(m.weight, std=0.02)
+    # if m.bias is not None:
+    #     nn.init.constant_(m.bias, 0)
+
+    # if isinstance(m, nn.BatchNorm2d):
+    #     nn.init.constant_(m.weight, 1)
+    #     nn.init.constant_(m.bias, 0)
+    # if isinstance(m, nn.Linear):
+    #   nn.init.normal_(m.weight, std=0.02)
+        # nn.init.constant_(m.bias, 0)
+
+
+class Decoder(nn.Module):
+    def __init__(self, img_dim, latent_dim, *args, **kargs):
+        super(Decoder, self).__init__()
+        self.negative_slope = 0.2
+        self.dims = [256, 128, 128, 64, img_dim]
+
+        # 4 x 4 x dims[0]
+        self.linear0 = nn.Sequential(nn.Linear(in_features = latent_dim, out_features = self.dims[0] * (4 * 4)),
+                                     nn.LeakyReLU(negative_slope=self.negative_slope, inplace=True))
+        # 8 x 8 x dims[1]
+        self.deconv0 = nn.Sequential(nn.ConvTranspose2d(in_channels=self.dims[0], out_channels=self.dims[1],
+                                                        kernel_size=4, stride=2, padding=1),
+                                     nn.BatchNorm2d(self.dims[1]),
+                                     nn.LeakyReLU(negative_slope=self.negative_slope, inplace=True))
+        # 16 x 16 x dims[2]
+        self.deconv1 = nn.Sequential(nn.ConvTranspose2d(in_channels=self.dims[1], out_channels=self.dims[2],
+                                                        kernel_size=4, stride=2, padding=1),
+                                     nn.BatchNorm2d(self.dims[2]),
+                                     nn.LeakyReLU(negative_slope=self.negative_slope, inplace=True))
+        # 32 x 32 x dims[3]
+        self.deconv2 = nn.Sequential(nn.ConvTranspose2d(in_channels=self.dims[2], out_channels=self.dims[3],
+                                                        kernel_size=4, stride=2, padding=1),
+                                     nn.BatchNorm2d(self.dims[3]),
+                                     nn.LeakyReLU(negative_slope=self.negative_slope, inplace=True))
+        # 64 x 64 x dims[4]
+        self.deconv3 = nn.ConvTranspose2d(in_channels=self.dims[3], out_channels=self.dims[4], kernel_size=4,
+                                          stride=2, padding=1)
+
+        self.apply(initialize_weights)
+
+    def forward(self, x):
+        x = self.linear0(x)
+        x = x.view(-1, self.dims[0], 4, 4)
+        x = self.deconv0(x)
+        x = self.deconv1(x)
+        x = self.deconv2(x)
+        x = self.deconv3(x)
+        x = torch.tanh_(x)
+        return x
+
+class Encoder(nn.Module):
+    def __init__(self, img_dim, latent_dim, *argd, **kargs):
+        super(Encoder, self).__init__()
+        self.dims = [64, 128, 128, 256]
+
+        self.conv0 = nn.Sequential(nn.Conv2d(in_channels=img_dim, out_channels=self.dims[0], kernel_size=4, stride=2, padding=1),
+                                   nn.LeakyReLU(negative_slope=0.2, inplace=True))
+
+        self.conv1 = nn.Sequential(nn.Conv2d(in_channels=self.dims[0], out_channels=self.dims[1], kernel_size=4, stride=2, padding=1),
+                                   nn.LeakyReLU(negative_slope=0.2, inplace=True))
+
+        self.conv2 = nn.Sequential(nn.Conv2d(in_channels=self.dims[1], out_channels=self.dims[2], kernel_size=4, stride=2, padding=1),
+                                   nn.LeakyReLU(negative_slope=0.2, inplace=True))
+
+        self.conv3 = nn.Sequential(nn.Conv2d(in_channels=self.dims[2], out_channels=self.dims[3], kernel_size=4, stride=2, padding=1),
+                                   nn.LeakyReLU(negative_slope=0.2, inplace=True))
+
+        # self.linear0 = nn.Sequential(nn.Flatten(1),
+        #                              nn.Linear(in_features=self.dims[3] * (4 * 4), out_features=latent_dim),
+        #                              nn.LeakyReLU(negative_slope=0.2, inplace=True)
+        #                              )
+        self.apply(initialize_weights)
+
+    def forward(self, x):
+        x = self.conv0(x)
+        x = self.conv1(x)
+        x = self.conv2(x)
+        x = self.conv3(x)
+        return x
+
+    def get_features(self, x):
+        x = self.conv0(x)
+        x = self.conv1(x)
+        x = self.conv2(x)
+        x = self.conv3(x)
+        return x
+
+
+class Embedding_labeled_latent(nn.Module):
+    def __init__(self, latent_dim, num_classes, *args, **kargs):
+        super(Embedding_labeled_latent, self).__init__()
+        self.embedding = nn.Sequential(nn.Embedding(num_embeddings=num_classes,
+                                                    embedding_dim=latent_dim),
+                                      nn.Flatten())
+
+    def forward(self, z, label):
+        le = z * self.embedding(label)
+        return le
+
+
+class Generator(nn.Module):
+    def __init__(self, img_dim, latent_dim, num_classes, **kwargs):
+        super(Generator, self).__init__()
+
+        self.embedding = Embedding_labeled_latent(latent_dim=latent_dim, num_classes=num_classes)
+        self.decoder = Decoder(img_dim=img_dim, latent_dim=latent_dim)
+
+
+    def forward(self, z, label):
+        latent = self.embedding(z, label)
+        gened_img = self.decoder(latent)
+
+        return gened_img
+
+class Discriminator(nn.Module):
+    def __init__(self, img_dim, latent_dim, num_classes):
+        super(Discriminator, self).__init__()
+
+        self.encoder = Encoder(img_dim, latent_dim)
+
+        self.embedding = nn.Sequential(nn.Embedding(num_embeddings=num_classes, embedding_dim=512),
+                                       nn.Flatten(),
+                                       nn.Linear(512, 256 * (4 * 4)),
+                                       nn.LeakyReLU(negative_slope=0.2, inplace=True))
+
+        self.discriminator = nn.Linear(256 * (4*4), 1)
+
+
+    def forward(self, img, label):
+        x = self.encoder.getFeatures(img)
+        x = torch.flatten(x, 1)
+
+        le = self.embedding(label)
+
+        out = x * le
+        out = self.discriminator(out)
+        return out
+
+class Discriminator_EC(nn.Module):
+    def __init__(self, img_dim, latent_dim, num_classes, d_embed_dim):
+        super(Discriminator_EC, self).__init__()
+
+        self.encoder = Encoder(img_dim, latent_dim)
+        self.linear1 = nn.Linear(in_features=self.encoder.dims[3], out_features=1, bias=True)
+        self.linear2 = nn.Linear(in_features=self.encoder.dims[3], out_features=d_embed_dim, bias=True)
+        self.embedding = nn.Embedding(num_embeddings=num_classes, embedding_dim=d_embed_dim)
+
+        # self.embedding = nn.Sequential(nn.Embedding(num_embeddings=num_classes, embedding_dim=d_embed_dim*2),
+        #                                nn.LeakyReLU(negative_slope=0.2, inplace=True),
+        #                                nn.Linear(d_embed_dim*2, d_embed_dim))
+
+        # self.discriminator = nn.Linear(256 * (4*4), 1)
+
+
+    def forward(self, img, label):
+        x = self.encoder.getFeatures(img)
+        x = torch.sum(x, dim=[2,3])
+        x = torch.flatten(x, 1)
+        adv_output = self.linear1(x)
+
+        embed_data = self.linear2(x)
+        embed_label = self.embedding(label)
+
+        embed_data = F.normalize(embed_data, dim=1)
+        embed_label = F.normalize(embed_label, dim=1)
+
+        return adv_output, embed_data, embed_label
+
+
+
+if __name__ == '__main__':
+    input_tensor = torch.rand(200, 3, 64, 64)
+    label = torch.randint(0, 10, (200,))
+    D = Discriminator_EC(3, 128, 10, 512)
+    adv_output, embed_data, embed_label = D(input_tensor, label)
+    print(adv_output.size(), embed_data.size(), embed_label.size())
+
+
+
+
+
+
+
+

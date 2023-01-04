@@ -1,0 +1,54 @@
+{
+    // Use IntelliSense to learn about possible attributes.
+    // Hover to view descriptions of existing attributes.
+    // For more information, visit: https://go.microsoft.com/fwlink/?linkid=830387
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "name": "Python: ebgan",
+            "type": "python",
+            "request": "launch",
+            "program": "${file}",
+            "console": "integratedTerminal",
+            "justMyCode": true
+        },
+        {
+            "name": "Python: Current File",
+            "type": "python",
+            "request": "launch",
+            "program": "${file}",
+            "args": [
+                "--gpus",
+                "1",
+                "2",
+                "--img_dim",
+                "3",
+                "--latent_dim",
+                "128",
+                "--epoch_ae",
+                "1",
+                "--lr",
+                "0.00005",
+                "--beta1",
+                "0.5",
+                "--beta2",
+                "0.999",
+                "--logger",
+                "true",
+                "--batch_size",
+                "128",
+                "--steps",
+                "10",
+                "--model",
+                "bagan",
+                "--path",
+                "./save_files/",
+                "--data_name",
+                "CIFAR10_LT",
+                "--is_save",
+                "true"
+            ],
+            "console": "integratedTerminal",
+        }
+    ]
+}
