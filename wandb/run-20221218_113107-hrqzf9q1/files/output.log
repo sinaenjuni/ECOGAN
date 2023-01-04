@@ -1,4 +1,0 @@
-Traceback (most recent call last):
-  File "./src/training.py", line 35, in <module>
-    encoder, decoder = getattr(model_module, 'pre_training')(loader_train, logger, world_size=1, rank=1, args=args)
-TypeError: pre_training() got an unexpected keyword argument 'rank'
