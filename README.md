@@ -66,7 +66,7 @@ The figure below is a visualization of the evaluation metric (FID, IS) measured 
 
 </p>
 
-<p align="center">
+<div align="center">
 
 | Method	| Data	| FID(↓)	| IS score(↑) |
 |:--------|:-----:|:--------:|:----------:|
@@ -76,7 +76,7 @@ The figure below is a visualization of the evaluation metric (FID, IS) measured 
 | **2C**[20]	    | imbalance	| 29.04	| 6.15 |
 | **D2D-CE**[27]	| imbalance	| 42.65	| 5.74 |
 | **ECO**(Ours)	  | imbalance  	| **25.53**	| **6.56** |
-</p>
+</div>
 
 
 <!-- ## 2. 힌지 손실 기반의 손실 함수가 불균형 데이터 학습에 불리한 이유 -->
@@ -94,7 +94,7 @@ The following figure is a visualization of the evaluation indicators measured in
 <!-- ## 3. 기존 사전 학습 방법들과 성능 비교를 위한 실험 -->
 ## 3. Experiments for performance comparison with existing pre-learning methods
 
-<p align="center">
+<div align="center">
 
 | Model	| Data	| Best step	| FID(↓)	| IS score(↑)	| Pre-trained	| Sampling |
 |:------|:-----:|:-----:|:-------:|:-----------:|:-----------:|:--------:|
@@ -112,7 +112,7 @@ The following figure is a visualization of the evaluation indicators measured in
 | **EBGAN**[12]	    | Places_LT	      | 144000	| 144.04	| 2.46	| TRUE	| - |
 | **ECOGAN**(ours)	| Places_LT	      | 105000	| 91.55	  | 3.02	| -    	| FALSE |
 | **ECOGAN**(ours)	| Places_LT	      | 75000	  | 95.43	  | 3.01	| -	    | TRUE |
-</p>
+</div>
 
 <!-- # 데이터 생성 품질 평가를 위한 생성 데이터 시각화 -->
 # Visualization of generated data for evaluating the quality
