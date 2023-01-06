@@ -64,6 +64,10 @@ The figure below is a visualization of the evaluation metric (FID, IS) measured 
 <p align="center">
   <img width="50%" src="https://github.com/sinaenjuni/ECOGAN/blob/main/docs/imgs/5_compare_metric_learning.png?raw=true" />
 
+</p>
+
+<p align="center">
+
 | Method	| Data	| FID(↓)	| IS score(↑) |
 |:--------|:-----:|:--------:|:----------:|
 | **2C**[20]	    | balance	  | 6.63	| 9.22 |
